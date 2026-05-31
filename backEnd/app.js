@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import allRoutes from "./routes/index.js";
+import allRoutes from "./src/routes/allRoutes/index.js";
 
 const app = express();
 
@@ -13,10 +13,6 @@ app.use(cors({
 
 app.use(cookieParser());
 app.use(express.json());
-
-// Iniciamos el Vigilante (Cron Job)
-startEventCheck();
-
 
 const api = process.env.API_URL || "/api";
 

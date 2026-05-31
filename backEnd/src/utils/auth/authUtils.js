@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import jsonwebtoken from "jsonwebtoken";
-import { config } from "../../config.js";
+import { config } from "../../../config.js";
 
 export const generateVerificationCode = () => {
     return crypto.randomBytes(3).toString("hex");
