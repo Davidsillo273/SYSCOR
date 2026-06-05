@@ -1,17 +1,17 @@
 import express from "express";
-import saucersController from "../controllers/saucersControlle.js";
+import drinksController from "../controllers/drinksController.js";
 import upload from "../utils/cloudinaryConfig.js";
 
 const router = express.Router();
 
 router
   .route("/")
-  .get(saucersController.getAllSaucers)
-  .post(upload.single("image"), saucersController.insertSaucer);
+  .get(drinksController.getAllDrinks)
+  .post(upload.single("image"), drinksController.insertDrink);
 
 router
   .route("/:id")
-  .put(upload.single("image"), saucersController.updateSaucer)
-  .delete(saucersController.deleteSaucer);
+  .put(upload.single("image"), drinksController.updateDrink)
+  .delete(drinksController.deleteDrink);
 
 export default router;
