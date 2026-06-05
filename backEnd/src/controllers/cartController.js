@@ -1,7 +1,7 @@
 import cartModel from "../models/cartModel.js";
-import combosModel from "../models/combos.js"; 
-import drinksModel from "../models/drinks.js"; 
-import extrasModel from "../models/extras.js"; 
+//import combosModel from "../models/combosModel.js"; 
+import drinksModel from "../models/drinksModel.js"; 
+import extrasModel from "../models/extrasModel.js"; 
 
 const cartController = {};
 
@@ -38,7 +38,7 @@ cartController.getCartById = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
+ 
 
 cartController.insertCart = async (req, res) => {
   try {

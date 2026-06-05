@@ -10,7 +10,7 @@ const cartSchema = new Schema({
         {combos:[
             {
                 comboId: {
-                    type: moongose.Schema.Types.ObjectId,
+                    type: mongoose.Schema.Types.ObjectId,
                     ref: "Combos"
                 },
                 quantity:{type:Number, default:1}
