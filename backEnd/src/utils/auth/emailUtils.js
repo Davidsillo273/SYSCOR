@@ -52,7 +52,7 @@ const HTMLVerificationEmail = (code) => `
                style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
           <tr>
             <td style="background:#B22222;padding:32px;text-align:center;">
-              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;">🌮 SYSCOR</h1>
+              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;"> SYSCOR</h1>
               <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Taquería El Corral</p>
             </td>
           </tr>

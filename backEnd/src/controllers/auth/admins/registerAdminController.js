@@ -2,7 +2,6 @@ import bcryptjs from "bcryptjs";
 import adminModel from "../../../models/adminModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
-import employeeUtils from "../../../utils/auth/employees/validationsEmployeesUtils.js";
 
 const registerAdminController = {};
 
@@ -17,7 +16,7 @@ registerAdminController.sendCode = async (req, res) => {
   try {
     const exists = await adminModel.findOne({ "loginInfo.email": email.toLowerCase().trim() });
     if (exists) {
-      return res.status(409).json({ message: "Ya existe un administrador con ese correo." });
+      return res.status(409).json({ message: "An administrator with this email already exists." });
     }
 
     const verificationCode = emailUtils.generateVerificationCode();
@@ -30,14 +29,14 @@ registerAdminController.sendCode = async (req, res) => {
 
     await emailUtils.sendEmail(
       email,
-      "Verificación de cuenta – SYSCOR",
+      "Account Verification – SYSCOR",
       emailUtils.HTMLVerificationEmail(verificationCode)
     );
 
-    return res.status(200).json({ message: "Código de verificación enviado al correo." });
+    return res.status(200).json({ message: "Verification code sent to your email." });
   } catch (error) {
     console.error("registerAdminController.sendCode:", error);
-    return res.status(500).json({ message: "Error interno del servidor." });
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
 
@@ -52,12 +51,12 @@ registerAdminController.verifyCode = async (req, res) => {
   try {
     const token = req.cookies.adminVerificationToken;
     if (!token) {
-      return res.status(401).json({ message: "Sesión de verificación expirada. Intenta de nuevo." });
+      return res.status(401).json({ message: "Verification session expired. Please try again." });
     }
 
     const decoded = emailUtils.verifyToken(token);
     if (code.toUpperCase() !== decoded.verificationCode) {
-      return res.status(400).json({ message: "El código de verificación no es correcto." });
+      return res.status(400).json({ message: "The verification code is incorrect." });
     }
 
     const verifiedToken = emailUtils.generateToken(
@@ -71,13 +70,13 @@ registerAdminController.verifyCode = async (req, res) => {
       maxAge: 30 * 60 * 1000,
     });
 
-    return res.status(200).json({ message: "Correo verificado. Continúa con el registro." });
+    return res.status(200).json({ message: "Email verified. Continue with the registration." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "El código ha expirado. Solicita uno nuevo." });
+      return res.status(401).json({ message: "The code has expired. Please request a new one." });
     }
     console.error("registerAdminController.verifyCode:", error);
-    return res.status(500).json({ message: "Error interno del servidor." });
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
 
@@ -85,29 +84,14 @@ registerAdminController.personalInfo = async (req, res) => {
   const {
     name,
     lastname,
-    DUI_NIT,
     address,
     phone,
-    type,
     image,
-    salary,
-    AFP,
-    rent,
-    additionalPay,
-    workInsurance,
   } = req.body;
 
   const validation = utils.runValidations([
-    () => utils.validateName(name, "El nombre"),
-    () => utils.validateName(lastname, "El apellido"),
-    () => employeeUtils.validateDUI_NIT(DUI_NIT),
-    () => utils.validateAddress(address),
-    () => utils.validatePhone(phone),
-    () => employeeUtils.validateEmployeeType(type),
-    () => employeeUtils.validateSalary(salary),
-    () => (AFP !== undefined ? utils.validatePositiveNumber(AFP, "El AFP") : { valid: true }),
-    () => (rent !== undefined ? utils.validatePositiveNumber(rent, "El rent") : { valid: true }),
-    () => (additionalPay !== undefined ? utils.validatePositiveNumber(additionalPay, "El pago adicional") : { valid: true }),
+    () => utils.validateName(name, "First name"),
+    () => utils.validateName(lastname, "Last name"),
   ]);
 
   if (!validation.valid) {
@@ -117,12 +101,12 @@ registerAdminController.personalInfo = async (req, res) => {
   try {
     const token = req.cookies.adminRegistrationToken;
     if (!token) {
-      return res.status(401).json({ message: "Sesión de registro expirada. Verifica tu correo de nuevo." });
+      return res.status(401).json({ message: "Registration session expired. Please verify your email again." });
     }
 
     const decoded = emailUtils.verifyToken(token);
     if (!decoded.emailVerified) {
-      return res.status(401).json({ message: "El correo no ha sido verificado." });
+      return res.status(401).json({ message: "The email has not been verified." });
     }
 
     const infoToken = emailUtils.generateToken(
@@ -132,18 +116,7 @@ registerAdminController.personalInfo = async (req, res) => {
         personalInfo: {
           name: name.trim(),
           lastname: lastname.trim(),
-          DUI_NIT: DUI_NIT.trim(),
-          address: address.trim(),
-          phone: phone.trim(),
-          type,
           image: image || null,
-        },
-        workInfo: {
-          salary: Number(salary),
-          AFP: Number(AFP) || 0,
-          rent: Number(rent) || 0,
-          additionalPay: Number(additionalPay) || 0,
-          workInsurance: workInsurance === true || workInsurance === "true",
         },
       },
       "30m"
@@ -155,13 +128,13 @@ registerAdminController.personalInfo = async (req, res) => {
       maxAge: 30 * 60 * 1000,
     });
 
-    return res.status(200).json({ message: "Información guardada. Continúa con la contraseña." });
+    return res.status(200).json({ message: "Information saved. Continue with the password." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Sesión expirada. Verifica tu correo de nuevo." });
+      return res.status(401).json({ message: "Session expired. Please verify your email again." });
     }
     console.error("registerAdminController.personalInfo:", error);
-    return res.status(500).json({ message: "Error interno del servidor." });
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
 
@@ -176,19 +149,20 @@ registerAdminController.setPassword = async (req, res) => {
   try {
     const token = req.cookies.adminRegistrationToken;
     if (!token) {
-      return res.status(401).json({ message: "Sesión de registro expirada." });
+      return res.status(401).json({ message: "Registration session expired." });
     }
 
     const decoded = emailUtils.verifyToken(token);
-    if (!decoded.emailVerified || !decoded.personalInfo || !decoded.workInfo) {
-      return res.status(401).json({ message: "Registro incompleto. Empieza de nuevo." });
+
+    if (!decoded.emailVerified || !decoded.personalInfo) {
+      return res.status(401).json({ message: "Incomplete registration. Please start over." });
     }
 
-    const { email, personalInfo, workInfo } = decoded;
+    const { email, personalInfo } = decoded;
 
     const exists = await adminModel.findOne({ "loginInfo.email": email });
     if (exists) {
-      return res.status(409).json({ message: "Ya existe un administrador con ese correo." });
+      return res.status(409).json({ message: "An administrator with this email already exists." });
     }
 
     const passwordHash = await bcryptjs.hash(password, 10);
@@ -197,11 +171,9 @@ registerAdminController.setPassword = async (req, res) => {
       personalInfo: {
         name: personalInfo.name,
         lastname: personalInfo.lastname,
-        DUI_NIT: personalInfo.DUI_NIT,
         address: personalInfo.address,
         phone: personalInfo.phone,
         image: personalInfo.image,
-        type: personalInfo.type,
       },
       loginInfo: {
         email,
@@ -210,27 +182,23 @@ registerAdminController.setPassword = async (req, res) => {
         loginAttempts: 0,
         timeOut: null,
       },
-      workInfo: {
-        salary: workInfo.salary,
-        AFP: workInfo.AFP,
-        rent: workInfo.rent,
-        additionalPay: workInfo.additionalPay,
-        workInsurance: workInfo.workInsurance,
-        isAuthorized: false,
+      permissions: {
+        role: "admin",
+        isAuthorized: true,
         status: "active",
-      },
+      }
     });
 
     await newAdmin.save();
     res.clearCookie("adminRegistrationToken");
 
-    return res.status(201).json({ message: "Administrador registrado exitosamente." });
+    return res.status(201).json({ message: "Administrator registered successfully." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Sesión expirada. Empieza el registro de nuevo." });
+      return res.status(401).json({ message: "Session expired. Please start the registration over." });
     }
     console.error("registerAdminController.setPassword:", error);
-    return res.status(500).json({ message: "Error interno del servidor." });
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
 

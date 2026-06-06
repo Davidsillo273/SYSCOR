@@ -35,11 +35,15 @@ const employeeSchema = new Schema(
         default: "active",
       },
     },
+    permissions: {
+      type: [String], 
+      default: [],    
+    }
   },
   {
     timestamps: true,
-    strict: false,
+    strict: true,
   },
 );
 
-export default model("Employee", employeeSchema);
+export default model("Employees", employeeSchema);

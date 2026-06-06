@@ -43,7 +43,7 @@ const customerSchema = new Schema(
       timeOut: { type: Date, default: null },
     },
     favorites: {
-      type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      type: [{ type: Schema.Types.ObjectId, ref: "Products" }],
       default: [],
     },
   },
@@ -53,4 +53,4 @@ const customerSchema = new Schema(
   },
 );
 
-export default model("Customer", customerSchema);
+export default model("Customers", customerSchema);
