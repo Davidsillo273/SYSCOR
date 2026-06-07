@@ -19,6 +19,8 @@ import loginAdminRoutes from "../auth/admins/loginAdminRoutes.js";
 
 //auth - logout
 import logoutRoutes from "../auth/logoutRoutes.js";
+//auth - recovery password
+import recoveryPasswordRoutes from "../auth/recoveryPasswordRoutes.js";
 
 const router = Router();
 
@@ -42,6 +44,8 @@ router.use("/auth/admins/login", loginAdminRoutes);
 
 //auth - logout
 router.use("/auth/logout", logoutRoutes);
+//auth - recovery password
+router.use("/auth/recoveryPassword", recoveryPasswordRoutes);
 
 export default router;
 
