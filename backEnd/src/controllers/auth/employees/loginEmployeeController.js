@@ -1,5 +1,6 @@
 import employeeModel from "../../../models/employeeModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
+import cookieConfig from "../../../config/cookieConfig.js";
 
 const loginEmployeeController = {};
 loginEmployeeController.loginEmployee = async (req, res) => {
@@ -12,10 +13,7 @@ loginEmployeeController.loginEmployee = async (req, res) => {
             return res.status(result.status).json({ message: result.message });
         }
 
-        res.cookie("authCookie", result.token, {
-            httpOnly: true,
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
+        res.cookie("authCookie", result.token, cookieConfig);
 
         return res.status(200).json({ message: result.message });
     } catch (error) {

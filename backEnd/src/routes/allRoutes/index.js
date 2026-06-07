@@ -9,10 +9,16 @@ import inventoryRoutes from "../inventoryRoutes.js";
 
 //auth - customers
 import registerCustomerRoutes from "../auth/customers/registerCustomerRoutes.js";
+import loginCustomerRoutes from "../auth/customers/loginCustomerRoutes.js";
 //auth - employees
 import registerEmployeeRoutes from "../auth/employees/registerEmployeeRoutes.js";
+import loginEmployeeRoutes from "../auth/employees/loginEmployeeRoutes.js";
 //auth - admins
 import registerAdminRoutes from "../auth/admins/registerAdminRoutes.js";
+import loginAdminRoutes from "../auth/admins/loginAdminRoutes.js";
+
+//auth - logout
+import logoutRoutes from "../auth/logoutRoutes.js";
 
 const router = Router();
 
@@ -26,9 +32,16 @@ router.use("/inventory", inventoryRoutes);
 
 //auth - customers
 router.use("/auth/customers/register", registerCustomerRoutes);
+router.use("/auth/customers/login", loginCustomerRoutes);
 //auth - employees
 router.use("/auth/employees/register", registerEmployeeRoutes);
+router.use("/auth/employees/login", loginEmployeeRoutes);
 //auth - admins
 router.use("/auth/admins/register", registerAdminRoutes);
+router.use("/auth/admins/login", loginAdminRoutes);
+
+//auth - logout
+router.use("/auth/logout", logoutRoutes);
 
 export default router;
+
