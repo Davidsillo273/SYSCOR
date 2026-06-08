@@ -5,6 +5,9 @@ import drinksRouters from "../drinksRoutes.js";
 import saucerRouters from "../saucersRoutes.js";
 import combosRouters from "../combosRoutes.js";
 import inventoryRoutes from "../inventoryRoutes.js";
+import customerRoutes from "../customerRoutes.js";
+import employeeRoutes from "../employeeRoutes.js";
+import adminRoutes from "../adminRoutes.js";
 // Aquí importamos todas las rutas de cada módulo
 
 //auth - customers
@@ -31,6 +34,9 @@ router.use("/drinks", drinksRouters);
 router.use("/saucers", saucerRouters);
 router.use("/combos", combosRouters);
 router.use("/inventory", inventoryRoutes);
+router.use("/customers", customerRoutes);
+router.use("/employees", employeeRoutes);
+router.use("/admins", adminRoutes);
 
 //auth - customers
 router.use("/auth/customers/register", registerCustomerRoutes);
