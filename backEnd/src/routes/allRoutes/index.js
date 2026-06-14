@@ -8,6 +8,7 @@ import inventoryRoutes from "../inventoryRoutes.js";
 import customerRoutes from "../customerRoutes.js";
 import employeeRoutes from "../employeeRoutes.js";
 import adminRoutes from "../adminRoutes.js";
+import wompiRoutes from "../wompiRoutes.js";
 // Aquí importamos todas las rutas de cada módulo
 
 //auth - customers
@@ -38,6 +39,9 @@ router.use("/customers", customerRoutes);
 router.use("/employees", employeeRoutes);
 router.use("/admins", adminRoutes);
 
+//Wompi
+router.use("/wompi", wompiRoutes);
+
 //auth - customers
 router.use("/auth/customers/register", registerCustomerRoutes);
 router.use("/auth/customers/login", loginCustomerRoutes);
@@ -54,4 +58,3 @@ router.use("/auth/logout", logoutRoutes);
 router.use("/auth/recoveryPassword", recoveryPasswordRoutes);
 
 export default router;
-
