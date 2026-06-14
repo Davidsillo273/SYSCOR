@@ -25,7 +25,7 @@ const CombosSchema = new Schema({
         type: String
     },
     status: {
-        type: Boolean,
+        type: String,
     },
     public_id: {
         type: String}

@@ -8,7 +8,7 @@ const extraSchema = new Schema({
         type : Number
     },
     status: {
-        type : Boolean
+        type : String
     }
 },{
     timestamps : true,

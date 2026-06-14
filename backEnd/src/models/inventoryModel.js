@@ -17,7 +17,8 @@ const inventorySchema = new Schema({
         type: String
     },
     status: {
-        type: Boolean}
+        type: String
+    }
 }, 
 {
     timestamps: true,

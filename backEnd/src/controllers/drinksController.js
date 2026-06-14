@@ -1,10 +1,10 @@
 import drinkModel from "../models/drinksModel.js";
 import { v2 as cloudinary } from "cloudinary";
+import validationsDrinks from "../utils/drinks/validationsDrinksUtils.js";
 
 // Array de funciones
 const drinksController = {};
 
-// OBTENER TODOS LOS DRINKS
 drinksController.getAllDrinks = async (req, res) => {
   try {
     const drinks = await drinkModel.find();
@@ -15,11 +15,34 @@ drinksController.getAllDrinks = async (req, res) => {
   }
 };
 
-// INSERTAR DRINK
 drinksController.insertDrink = async (req, res) => {
   try {
-    // Obtener los datos del body
     const { name, price, quantity, status } = req.body;
+
+    let validation = validationsDrinks.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validatePrice(price);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validateQuantity(quantity);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validateStatus(status);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validateImage(req.file);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
 
     // Crear nuevo registro
     const newDrink = new drinkModel({
@@ -39,42 +62,49 @@ drinksController.insertDrink = async (req, res) => {
     });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    return res.status(500).json({message: "Internal server error",});
   }
 };
 
-// ELIMINAR DRINK
 drinksController.deleteDrink = async (req, res) => {
   try {
-    // Buscar el drink
     const drinkFound = await drinkModel.findById(req.params.id);
 
-    // Eliminar imagen de Cloudinary
     await cloudinary.uploader.destroy(drinkFound.public_id);
 
-    // Eliminar de la base de datos
     await drinkModel.findByIdAndDelete(req.params.id);
 
-    return res.status(200).json({
-      message: "Drink deleted successfully",
-    });
+    return res.status(200).json({message: "Drink deleted successfully",});
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    return res.status(500).json({message: "Internal server error",});
   }
 };
 
-// ACTUALIZAR DRINK
 drinksController.updateDrink = async (req, res) => {
   try {
-    // Obtener los nuevos datos
     const { name, price, quantity, status } = req.body;
 
-    // Buscar el drink a actualizar
+    let validation = validationsDrinks.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validatePrice(price);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validateQuantity(quantity);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsDrinks.validateStatus(status);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     const drinkFound = await drinkModel.findById(req.params.id);
 
     const updatedData = {
@@ -84,29 +114,21 @@ drinksController.updateDrink = async (req, res) => {
       status,
     };
 
-    // Si viene una nueva imagen
     if (req.file) {
-      // Eliminar la imagen anterior de Cloudinary
       await cloudinary.uploader.destroy(drinkFound.public_id);
 
-      // Guardar los datos de la nueva imagen
       updatedData.image = req.file.path;
       updatedData.public_id = req.file.filename;
     }
 
-    // Actualizar en la base de datos
     await drinkModel.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
     });
 
-    return res.status(200).json({
-      message: "Drink updated successfully",
-    });
+    return res.status(200).json({message: "Drink updated successfully",});
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    return res.status(500).json({message: "Internal server error",});
   }
 };
 

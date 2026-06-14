@@ -1,10 +1,9 @@
-//Array de funciones
 const extrasController = {};
 
-//Importo la colección que voy a ocupar
 import extrasModel from "../models/extrasModel.js";
+import validationsExtras from "../utils/extras/validationsExtrasUtils.js";
 
-//SELECT
+
 extrasController.getExtras = async (req, res) => {
   try {
     const extras = await extrasModel.find();
@@ -15,17 +14,31 @@ extrasController.getExtras = async (req, res) => {
   }
 };
 
-//INSERT
 extrasController.insertExtras = async (req, res) => {
   try {
-    //#1- Solicitamos los datos
     let { name, price, status } = req.body;
+
+    let validation = validationsExtras.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsExtras.validatePrice(price);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsExtras.validateStatus(status);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
 
     const newExtra = new extrasModel({
       name,
       price,
       status,
     });
+
     await newExtra.save();
 
     return res.status(201).json({ message: "Extra saved" });
@@ -35,11 +48,10 @@ extrasController.insertExtras = async (req, res) => {
   }
 };
 
-//ELIMINAR
 extrasController.deleteExtra = async (req, res) => {
   try {
     const deletedExtra = await extrasModel.findByIdAndDelete(
-      req.params.id,
+      req.params.id
     );
 
     if (!deletedExtra) {
@@ -53,11 +65,24 @@ extrasController.deleteExtra = async (req, res) => {
   }
 };
 
-//ACTUALIZAR
 extrasController.updateExtra = async (req, res) => {
   try {
-    //#1- Solicitamos los datos
     let { name, price, status } = req.body;
+
+    let validation = validationsExtras.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsExtras.validatePrice(price);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsExtras.validateStatus(status);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
 
     const extraUpdated = await extrasModel.findByIdAndUpdate(
       req.params.id,
@@ -66,7 +91,7 @@ extrasController.updateExtra = async (req, res) => {
         price,
         status,
       },
-      { new: true },
+      { new: true }
     );
 
     if (!extraUpdated) {

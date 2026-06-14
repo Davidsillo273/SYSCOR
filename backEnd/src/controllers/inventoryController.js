@@ -1,9 +1,8 @@
 import inventoryModel from "../models/inventoryModel.js";
+import validationsInventory from "../utils/inventory/validationsInventoryUtils.js";
 
-// Array de funciones
 const inventoryController = {};
 
-// OBTENER TODOS LOS PRODUCTOS DEL INVENTARIO
 inventoryController.getAllInventory = async (req, res) => {
   try {
     const inventory = await inventoryModel.find();
@@ -17,7 +16,6 @@ inventoryController.getAllInventory = async (req, res) => {
   }
 };
 
-// OBTENER PRODUCTO POR ID
 inventoryController.getInventoryById = async (req, res) => {
   try {
     const inventory = await inventoryModel.findById(req.params.id);
@@ -37,7 +35,6 @@ inventoryController.getInventoryById = async (req, res) => {
   }
 };
 
-// INSERTAR PRODUCTO
 inventoryController.insertInventory = async (req, res) => {
   try {
     const {
@@ -48,6 +45,36 @@ inventoryController.insertInventory = async (req, res) => {
       type,
       status,
     } = req.body;
+
+    let validation = validationsInventory.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validatePrice(price);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateUbication(ubication);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateQuantity(quantity);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateType(type);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateStatus(status);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
 
     const newInventory = new inventoryModel({
       name,
@@ -78,9 +105,7 @@ inventoryController.deleteInventory = async (req, res) => {
     const inventoryFound = await inventoryModel.findById(req.params.id);
 
     if (!inventoryFound) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
+      return res.status(404).json({message: "Product not found",});
     }
 
     await inventoryModel.findByIdAndDelete(req.params.id);
@@ -108,12 +133,40 @@ inventoryController.updateInventory = async (req, res) => {
       status,
     } = req.body;
 
+    let validation = validationsInventory.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validatePrice(price);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateUbication(ubication);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateQuantity(quantity);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateType(type);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsInventory.validateStatus(status);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     const inventoryFound = await inventoryModel.findById(req.params.id);
 
     if (!inventoryFound) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
+      return res.status(404).json({message: "Product not found",});
     }
 
     const updatedData = {
@@ -134,14 +187,11 @@ inventoryController.updateInventory = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "Product updated successfully",
-      updatedInventory,
+      message: "Product updated successfully",updatedInventory,
     });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({
-      message: "Internal server error",
-    });
+    return res.status(500).json({message: "Internal server error"});
   }
 };
 
