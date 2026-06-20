@@ -1,6 +1,6 @@
 import express from "express";
-import saucersController from "../controllers/saucersControlle.js";
-import upload from "../utils/cloudinaryConfig.js";
+import saucersController from "../../controllers/menu/saucersControlle.js";
+import upload from "../../utils/cloudinaryConfig.js";
 const router = express.Router();
 
 router

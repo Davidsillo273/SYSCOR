@@ -1,5 +1,5 @@
-import inventoryModel from "../models/inventoryModel.js";
-import validationsInventory from "../utils/inventory/validationsInventoryUtils.js";
+  import inventoryModel from "../../models//inventory/inventoryModel.js";
+import validationsInventory from "../../utils/inventory/validationsInventoryUtils.js";
 
 const inventoryController = {};
 

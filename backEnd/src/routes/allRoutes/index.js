@@ -1,13 +1,13 @@
 import { Router } from "express";
-import cartRoutes from "../cartRoutes.js";
-import extrasRouters from "../extrasRoutes.js";
-import drinksRouters from "../drinksRoutes.js";
-import saucerRouters from "../saucersRoutes.js";
-import combosRouters from "../combosRoutes.js";
-import inventoryRoutes from "../inventoryRoutes.js";
-import customerRoutes from "../customerRoutes.js";
-import employeeRoutes from "../employeeRoutes.js";
-import adminRoutes from "../adminRoutes.js";
+import cartRoutes from "../orders/cartRoutes.js";
+import extrasRouters from "../menu/extrasRoutes.js";
+import drinksRouters from "../menu/drinksRoutes.js";
+import saucerRouters from "../menu/saucersRoutes.js";
+import combosRouters from "../menu/combosRoutes.js";
+import inventoryRoutes from "../inventory/inventoryRoutes.js";
+import customerRoutes from "../users/customerRoutes.js";
+import employeeRoutes from "../users/employeeRoutes.js";
+import adminRoutes from "../users/adminRoutes.js";
 // Aquí importamos todas las rutas de cada módulo
 
 //auth - customers

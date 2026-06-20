@@ -1,6 +1,6 @@
-import adminModel from "../models/adminModel.js";
-import crudUtils from "../utils/users/crudUtils.js";
-import validationUtils from "../utils/auth/validationsUsersUtils.js";
+import adminModel from "../../models/users/adminModel.js";
+import crudUtils from "../../utils/users/crudUtils.js";
+import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 
 const adminController = {};
 

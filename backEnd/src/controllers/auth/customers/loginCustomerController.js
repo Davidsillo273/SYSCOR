@@ -1,4 +1,4 @@
-import customerModel from "../../../models/customerModel.js";
+import customerModel from "../../../models/users/customerModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 

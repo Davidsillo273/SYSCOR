@@ -1,6 +1,6 @@
-import customerModel from "../models/customerModel.js";
-import crudUtils from "../utils/users/crudUtils.js";
-import validationUtils from "../utils/auth/validationsUsersUtils.js";
+import customerModel from "../../models/users/customerModel.js";
+import crudUtils from "../../utils/users/crudUtils.js";
+import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 
 const customerController = {};
 

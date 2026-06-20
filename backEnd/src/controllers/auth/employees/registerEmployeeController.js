@@ -1,5 +1,5 @@
 import bcryptjs from "bcryptjs";
-import employeeModel from "../../../models/employeeModel.js";
+import employeeModel from "../../../models/users/employeeModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import employeeUtils from "../../../utils/auth/employees/validationsEmployeesUtils.js";

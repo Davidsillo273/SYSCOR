@@ -1,5 +1,5 @@
 import bcryptjs from "bcryptjs";
-import adminModel from "../../../models/adminModel.js";
+import adminModel from "../../../models/users/adminModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 

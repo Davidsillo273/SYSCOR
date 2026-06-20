@@ -1,4 +1,4 @@
-import employeeModel from "../../../models/employeeModel.js";
+import employeeModel from "../../../models/users/employeeModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 

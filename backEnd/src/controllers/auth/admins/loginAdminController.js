@@ -1,4 +1,4 @@
-import adminModel from "../../../models/adminModel.js";
+import adminModel from "../../../models/users/adminModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 

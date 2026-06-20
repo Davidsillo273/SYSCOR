@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 
-import Admin from "../../models/adminModel.js";
-import Employees from "../../models/employeeModel.js";
-import Customers from "../../models/customerModel.js";
+import Admin from "../../models/users/adminModel.js";
+import Employees from "../../models/users/employeeModel.js";
+import Customers from "../../models/users/customerModel.js";
 
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 import emailUtils from "../../utils/auth/emailUtils.js";

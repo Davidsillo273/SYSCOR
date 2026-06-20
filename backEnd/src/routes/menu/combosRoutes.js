@@ -1,6 +1,6 @@
 import express from "express";
-import combosController from "../controllers/combosController.js";
-import upload from "../utils/cloudinaryConfig.js";
+import combosController from "../../controllers/menu/combosController.js";
+import upload from "../../utils/cloudinaryConfig.js";
 
 const router = express.Router();
 

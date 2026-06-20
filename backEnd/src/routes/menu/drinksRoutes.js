@@ -1,6 +1,6 @@
 import express from "express";
-import drinksController from "../controllers/drinksController.js";
-import upload from "../utils/cloudinaryConfig.js";
+import drinksController from "../../controllers/menu/drinksController.js";
+import upload from "../../utils/cloudinaryConfig.js";
 
 const router = express.Router();
 

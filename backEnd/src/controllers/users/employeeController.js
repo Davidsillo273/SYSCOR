@@ -1,6 +1,6 @@
-import employeeModel from "../models/employeeModel.js";
-import crudUtils from "../utils/users/crudUtils.js";
-import validationUtils from "../utils/auth/validationsUsersUtils.js";
+import employeeModel from "../../models/users/employeeModel.js";
+import crudUtils from "../../utils/users/crudUtils.js";
+import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 
 const employeeController = {};
 
