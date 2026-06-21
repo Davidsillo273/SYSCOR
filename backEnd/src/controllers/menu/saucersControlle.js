@@ -1,6 +1,6 @@
-import saucersModel from "../models/saucersModel.js";
+import saucersModel from "../../models/menu/saucersModel.js";
 import { v2 as cloudinary } from "cloudinary";
-import validationsSaucers from "../utils/saucers/validationsSaucersUtils.js";
+import validationsSaucers from "../../utils/saucers/validationsSaucersUtils.js";
 
 const saucersController = {};
 

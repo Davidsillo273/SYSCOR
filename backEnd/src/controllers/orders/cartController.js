@@ -1,7 +1,7 @@
-import cartModel from "../models/cartModel.js";
-import combosModel from "../models/combosModel.js"; 
-import drinksModel from "../models/drinksModel.js"; 
-import extrasModel from "../models/extrasModel.js"; 
+import cartModel from "../../models/orders/cartModel.js";
+import combosModel from "../../models/menu/combosModel.js";
+import drinksModel from "../../models/menu/drinksModel.js";
+import extrasModel from "../../models/menu/extrasModel.js";
 
 const cartController = {};
 
@@ -12,7 +12,7 @@ cartController.getAllCarts = async (req, res) => {
       .populate("idCustomer", "name email")
       .populate("details.combos.comboId", "name price")
       .populate("details.extras.extraId", "name price")
-      .populate("details.extras.drinks.drinkId", "name price"); 
+      .populate("details.extras.drinks.drinkId", "name price");
     return res.status(200).json(carts);
   } catch (error) {
     console.log("error " + error);
@@ -38,7 +38,7 @@ cartController.getCartById = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
- 
+
 
 cartController.insertCart = async (req, res) => {
   try {
@@ -50,7 +50,7 @@ cartController.insertCart = async (req, res) => {
     for (let detail of details) {
       let subTotalDetail = 0;
 
-  
+
       if (detail.combos && detail.combos.length > 0) {
         for (let comboItem of detail.combos) {
           const comboFound = await combosModel.findById(comboItem.comboId);

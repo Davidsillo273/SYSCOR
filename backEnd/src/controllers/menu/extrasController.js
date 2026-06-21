@@ -1,7 +1,7 @@
 const extrasController = {};
 
-import extrasModel from "../models/extrasModel.js";
-import validationsExtras from "../utils/extras/validationsExtrasUtils.js";
+import extrasModel from "../../models/menu/extrasModel.js";
+import validationsExtras from "../../utils/extras/validationsExtrasUtils.js";
 
 
 extrasController.getExtras = async (req, res) => {

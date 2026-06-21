@@ -1,6 +1,6 @@
-import drinkModel from "../models/drinksModel.js";
+import drinkModel from "../../models/menu/drinksModel.js";
 import { v2 as cloudinary } from "cloudinary";
-import validationsDrinks from "../utils/drinks/validationsDrinksUtils.js";
+import validationsDrinks from "../../utils/drinks/validationsDrinksUtils.js";
 
 // Array de funciones
 const drinksController = {};

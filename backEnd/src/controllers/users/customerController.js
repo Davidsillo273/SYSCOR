@@ -1,6 +1,6 @@
-import customerModel from "../models/customerModel.js";
-import crudUtils from "../utils/users/crudUtils.js";
-import validationUtils from "../utils/auth/validationsUsersUtils.js";
+import customerModel from "../../models/users/customerModel.js";
+import crudUtils from "../../utils/users/crudUtils.js";
+import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 
 const customerController = {};
 
@@ -10,18 +10,6 @@ customerController.getCustomers = async (req, res) => {
         return res.status(200).json(customers);
     } catch (error) {
         console.error("Error getting customers:", error);
-        return res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-customerController.deleteCustomer = async (req, res) => {
-    try {
-        const deleted = await crudUtils.deleteDocumentById(customerModel, req.params.id);
-        if (!deleted) return res.status(404).json({ message: "Customer not found" });
-
-        return res.status(200).json({ message: "Customer deleted successfully" });
-    } catch (error) {
-        console.error("Error deleting customer:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };

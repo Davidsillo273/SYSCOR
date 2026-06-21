@@ -1,33 +1,44 @@
 import bcryptjs from "bcryptjs";
-import customerModel from "../../../models/customerModel.js";
+import customerModel from "../../../models/users/customerModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import customerUtils from "../../../utils/auth/customers/validationsCustomersUtils.js";
 
 const registerCustomerController = {};
 
+/**
+ * PASO 1 — Enviar código de verificación
+ * Valida el correo, verifica que no esté ya registrado, genera un código
+ * de verificación, lo guarda dentro de un JWT de corta duración (cookie
+ * httpOnly), y lo envía por correo al usuario.
+ */
 registerCustomerController.sendCode = async (req, res) => {
   const { email } = req.body;
 
+  // Validación básica de formato antes de tocar la base de datos
   const emailValidation = utils.validateEmail(email);
   if (!emailValidation.valid) {
     return res.status(400).json({ message: emailValidation.message });
   }
 
   try {
+    // Evita cuentas duplicadas
     const exists = await customerModel.findOne({ "loginInfo.email": email.toLowerCase().trim() });
     if (exists) {
       return res.status(409).json({ message: "An account with this email already exists." });
     }
 
+    // Genera un código de un solo uso y lo mete en un token firmado (aún no se guarda en la DB)
     const verificationCode = emailUtils.generateVerificationCode();
     const token = emailUtils.generateToken({ email: email.toLowerCase().trim(), verificationCode }, "15m");
 
+    // Guarda el token en una cookie httpOnly para que el cliente no pueda leerla ni modificarla
     res.cookie("customerVerificationToken", token, {
       httpOnly: true,
-      maxAge: 15 * 60 * 1000,
+      maxAge: 15 * 60 * 1000, // 15 minutos, coincide con la expiración del token
     });
 
+    // Envía el código por correo para que el usuario demuestre que es dueño de esa dirección
     await emailUtils.sendEmail(
       email,
       "Verify your account – Taquería El Corral",
@@ -41,6 +52,13 @@ registerCustomerController.sendCode = async (req, res) => {
   }
 };
 
+/**
+ * PASO 2 — Verificar código
+ * Confirma que el código que escribió el usuario coincide con el guardado
+ * en el token de la cookie. Si es correcto, emite un nuevo token marcado
+ * con `emailVerified: true`, que actúa como "pase" para continuar el flujo
+ * de registro.
+ */
 registerCustomerController.verifyCode = async (req, res) => {
   const { code } = req.body;
 
@@ -52,14 +70,19 @@ registerCustomerController.verifyCode = async (req, res) => {
   try {
     const token = req.cookies.customerVerificationToken;
     if (!token) {
+      // Si no hay cookie significa que el paso 1 nunca se completó o ya expiró
       return res.status(401).json({ message: "Verification session expired. Please try again." });
     }
 
+    // Lanza error si está expirado/inválido — se captura abajo
     const decoded = emailUtils.verifyToken(token);
+
     if (code.toUpperCase() !== decoded.verificationCode) {
       return res.status(400).json({ message: "The verification code is incorrect." });
     }
 
+    // Reemplaza la cookie de verificación por una cookie de "registro" que
+    // confirma que el correo fue verificado, aún sin contener datos personales
     const verifiedToken = emailUtils.generateToken(
       { email: decoded.email, emailVerified: true },
       "30m"
@@ -81,9 +104,17 @@ registerCustomerController.verifyCode = async (req, res) => {
   }
 };
 
+/**
+ * PASO 3 — Información personal
+ * Recolecta nombre, fecha de nacimiento, teléfonos y direcciones. Tampoco
+ * se escribe nada en la base de datos aquí — todo se agrega al token de
+ * registro para que el flujo se mantenga sin estado entre requests del servidor.
+ */
 registerCustomerController.personalInfo = async (req, res) => {
   const { name, lastname, birthdate, phones, addresses, image } = req.body;
 
+  // Arma la lista de validadores dinámicamente: birthdate/phones son
+  // opcionales, así que solo se validan si el usuario realmente los envió
   const validators = [
     () => utils.validateName(name, "First name"),
     () => utils.validateName(lastname, "Last name"),
@@ -105,9 +136,12 @@ registerCustomerController.personalInfo = async (req, res) => {
 
     const decoded = emailUtils.verifyToken(token);
     if (!decoded.emailVerified) {
+      // Chequeo defensivo: alguien intentando saltarse directo a este paso
       return res.status(401).json({ message: "The email has not been verified." });
     }
 
+    // Normaliza las direcciones: asegura que exactamente una quede marcada
+    // como default. Si el cliente no marcó ninguna, usa la primera por defecto.
     let normalizedAddresses = [];
     if (Array.isArray(addresses) && addresses.length > 0) {
       const hasDefault = addresses.some((a) => a.isDefault);
@@ -118,6 +152,7 @@ registerCustomerController.personalInfo = async (req, res) => {
       }));
     }
 
+    // Conserva email + emailVerified, y ahora agrega personalInfo al token
     const infoToken = emailUtils.generateToken(
       {
         email: decoded.email,
@@ -134,6 +169,7 @@ registerCustomerController.personalInfo = async (req, res) => {
       "30m"
     );
 
+    // Reemplaza el token anterior por el enriquecido
     res.clearCookie("customerRegistrationToken");
     res.cookie("customerRegistrationToken", infoToken, {
       httpOnly: true,
@@ -150,6 +186,12 @@ registerCustomerController.personalInfo = async (req, res) => {
   }
 };
 
+/**
+ * PASO 4 — Establecer contraseña y guardar
+ * Paso final: valida la contraseña, vuelve a chequear correos duplicados
+ * (red de seguridad ante condiciones de carrera), hashea la contraseña, y
+ * finalmente persiste el documento del cliente en MongoDB.
+ */
 registerCustomerController.setPassword = async (req, res) => {
   const { password } = req.body;
 
@@ -166,11 +208,13 @@ registerCustomerController.setPassword = async (req, res) => {
 
     const decoded = emailUtils.verifyToken(token);
     if (!decoded.emailVerified || !decoded.personalInfo) {
+      // Confirma que los pasos 2 y 3 realmente se completaron antes de permitir este
       return res.status(401).json({ message: "Incomplete registration. Please start over." });
     }
 
     const { email, personalInfo } = decoded;
 
+    // Vuelve a chequear que no se haya colado un duplicado mientras el usuario llenaba el formulario
     const exists = await customerModel.findOne({ "loginInfo.email": email });
     if (exists) {
       return res.status(409).json({ message: "An account with this email already exists." });
@@ -178,6 +222,7 @@ registerCustomerController.setPassword = async (req, res) => {
 
     const passwordHash = await bcryptjs.hash(password, 10);
 
+    // Este es el único lugar donde el documento se crea realmente en la DB
     const newCustomer = new customerModel({
       personalInfo: {
         name: personalInfo.name,
@@ -186,12 +231,12 @@ registerCustomerController.setPassword = async (req, res) => {
         birthdate: personalInfo.birthdate,
         addresses: personalInfo.addresses,
         phones: personalInfo.phones,
-        cards: [],
+        cards: [], // las tarjetas se agregan después mediante el flujo de tokenización de Wompi
       },
       loginInfo: {
         email,
         password: passwordHash,
-        isVerified: true,
+        isVerified: true, // ya se comprobó con el código de correo en el paso 2
         loginAttempts: 0,
         timeOut: null,
       },
@@ -199,7 +244,7 @@ registerCustomerController.setPassword = async (req, res) => {
     });
 
     await newCustomer.save();
-    res.clearCookie("customerRegistrationToken");
+    res.clearCookie("customerRegistrationToken"); // el flujo de registro terminó, se descarta el token
 
     return res.status(201).json({ message: "Account created successfully. Welcome to Taquería El Corral!" });
   } catch (error) {

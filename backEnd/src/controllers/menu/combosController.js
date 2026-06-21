@@ -1,6 +1,6 @@
-import combosModel from "../models/combosModel.js";
+import combosModel from "../../models/menu/combosModel.js";
 import { v2 as cloudinary } from "cloudinary";
-import validationsCombos from "../utils/combos/validationsCombosUtils.js";
+import validationsCombos from "../../utils/combos/validationsCombosUtils.js";
 
 const combosController = {};
 
