@@ -7,7 +7,7 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(drinksController.getAllDrinks)
+  .get(validateAuthCookie(["admin"]), drinksController.getAllDrinks)
   .post(validateAuthCookie(["admin"]), upload.single("image"), drinksController.insertDrink);
 
 router

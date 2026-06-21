@@ -6,7 +6,7 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(extrasController.getExtras)
+  .get(validateAuthCookie(["admin"]), extrasController.getExtras)
   .post(validateAuthCookie(["admin"]), extrasController.insertExtras);
 
 router

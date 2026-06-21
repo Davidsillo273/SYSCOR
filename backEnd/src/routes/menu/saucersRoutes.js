@@ -7,7 +7,7 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(saucersController.getAllSaucers)
+  .get(validateAuthCookie(["admin"]),saucersController.getAllSaucers)
   .post(validateAuthCookie(["admin"]), upload.single("image"), saucersController.insertSaucer);
 
 router

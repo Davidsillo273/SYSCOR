@@ -42,7 +42,7 @@ router.use("/employees", employeeRoutes);
 router.use("/admins", validateAuthCookie(["admin"]), adminRoutes);
 
 //auth - customers
-router.use("/auth/customers/register", validateAuthCookie(["customer"]), registerCustomerRoutes);
+router.use("/auth/customers/register", registerCustomerRoutes);
 router.use("/auth/customers/login", loginCustomerRoutes);
 //auth - employees
 router.use("/auth/employees/register", validateAuthCookie(["employee"]), registerEmployeeRoutes);
