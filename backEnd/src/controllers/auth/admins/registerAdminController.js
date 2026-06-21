@@ -5,6 +5,12 @@ import utils from "../../../utils/auth/validationsUsersUtils.js";
 
 const registerAdminController = {};
 
+/**
+ * PASO 1 — Enviar código de verificación
+ * Mismo patrón que los flujos de empleado/cliente: valida el correo,
+ * verifica duplicados, genera un código, lo guarda en una cookie httpOnly
+ * firmada, y lo envía por correo al usuario.
+ */
 registerAdminController.sendCode = async (req, res) => {
   const { email } = req.body;
 
@@ -40,6 +46,11 @@ registerAdminController.sendCode = async (req, res) => {
   }
 };
 
+/**
+ * PASO 2 — Verificar código
+ * Valida el código escrito contra el guardado en el token, y luego mejora
+ * la cookie a un token de registro con `emailVerified: true`.
+ */
 registerAdminController.verifyCode = async (req, res) => {
   const { code } = req.body;
 
@@ -80,12 +91,16 @@ registerAdminController.verifyCode = async (req, res) => {
   }
 };
 
+/**
+ * PASO 3 — Información personal
+ * Los administradores solo necesitan nombre/apellido/imagen (nada de DUI,
+ * salario, dirección ni teléfono — esos campos no aplican a este rol).
+ * Solo nombre/apellido se validan y se guardan en el token en este paso.
+ */
 registerAdminController.personalInfo = async (req, res) => {
   const {
     name,
     lastname,
-    address,
-    phone,
     image,
   } = req.body;
 
@@ -138,6 +153,13 @@ registerAdminController.personalInfo = async (req, res) => {
   }
 };
 
+/**
+ * PASO 4 — Establecer contraseña y guardar
+ * Valida la contraseña, vuelve a chequear duplicados, hashea la
+ * contraseña, y crea el documento del administrador. Los admins quedan
+ * autoautorizados y activos desde su creación (a diferencia de los
+ * empleados, que necesitan aprobación explícita).
+ */
 registerAdminController.setPassword = async (req, res) => {
   const { password } = req.body;
 
@@ -171,8 +193,6 @@ registerAdminController.setPassword = async (req, res) => {
       personalInfo: {
         name: personalInfo.name,
         lastname: personalInfo.lastname,
-        address: personalInfo.address,
-        phone: personalInfo.phone,
         image: personalInfo.image,
       },
       loginInfo: {
@@ -182,6 +202,7 @@ registerAdminController.setPassword = async (req, res) => {
         loginAttempts: 0,
         timeOut: null,
       },
+      // Los admins obtienen acceso total de inmediato — no requieren aprobación manual
       permissions: {
         role: "admin",
         isAuthorized: true,

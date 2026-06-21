@@ -25,10 +25,13 @@ import logoutRoutes from "../auth/logoutRoutes.js";
 //auth - recovery password
 import recoveryPasswordRoutes from "../auth/recoveryPasswordRoutes.js";
 
+//Midleware de autenticación
+import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
+
 const router = Router();
 
 //Nombres de los endpoints
-router.use("/carts", cartRoutes);
+router.use("/carts", validateAuthCookie(["customer"]), cartRoutes);
 router.use("/extras", extrasRouters);
 router.use("/drinks", drinksRouters);
 router.use("/saucers", saucerRouters);
@@ -36,16 +39,16 @@ router.use("/combos", combosRouters);
 router.use("/inventory", inventoryRoutes);
 router.use("/customers", customerRoutes);
 router.use("/employees", employeeRoutes);
-router.use("/admins", adminRoutes);
+router.use("/admins", validateAuthCookie(["admin"]), adminRoutes);
 
 //auth - customers
-router.use("/auth/customers/register", registerCustomerRoutes);
+router.use("/auth/customers/register", validateAuthCookie(["customer"]), registerCustomerRoutes);
 router.use("/auth/customers/login", loginCustomerRoutes);
 //auth - employees
-router.use("/auth/employees/register", registerEmployeeRoutes);
+router.use("/auth/employees/register", validateAuthCookie(["employee"]), registerEmployeeRoutes);
 router.use("/auth/employees/login", loginEmployeeRoutes);
 //auth - admins
-router.use("/auth/admins/register", registerAdminRoutes);
+router.use("/auth/admins/register", validateAuthCookie(["admin"]), registerAdminRoutes);
 router.use("/auth/admins/login", loginAdminRoutes);
 
 //auth - logout

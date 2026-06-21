@@ -6,6 +6,11 @@ import employeeUtils from "../../../utils/auth/employees/validationsEmployeesUti
 
 const registerEmployeeController = {};
 
+/**
+ * PASO 1 — Enviar código de verificación
+ * Mismo flujo que admin/cliente: valida el correo, verifica duplicados,
+ * genera código + token, lo guarda en una cookie httpOnly, lo envía por correo.
+ */
 registerEmployeeController.sendCode = async (req, res) => {
   const { email } = req.body;
 
@@ -41,6 +46,11 @@ registerEmployeeController.sendCode = async (req, res) => {
   }
 };
 
+/**
+ * PASO 2 — Verificar código
+ * Compara el código recibido contra el del token, y luego emite un token
+ * con `emailVerified: true` para desbloquear el siguiente paso.
+ */
 registerEmployeeController.verifyCode = async (req, res) => {
   const { code } = req.body;
 
@@ -81,6 +91,13 @@ registerEmployeeController.verifyCode = async (req, res) => {
   }
 };
 
+/**
+ * PASO 3 — Información personal y laboral
+ * El paso con más datos de los tres roles: recolecta campos de identidad
+ * (DUI/NIT, dirección, teléfono, tipo de empleado) más campos de planilla
+ * (salario, AFP, rent, additionalPay, workInsurance). Todo se valida antes
+ * de meterse al token de registro — todavía nada toca la DB.
+ */
 registerEmployeeController.personalInfo = async (req, res) => {
   const {
     name,
@@ -105,6 +122,7 @@ registerEmployeeController.personalInfo = async (req, res) => {
     () => utils.validatePhone(phone),
     () => employeeUtils.validateEmployeeType(type),
     () => employeeUtils.validateSalary(salary),
+    // Campos de planilla opcionales: solo se validan si el cliente realmente los envió
     () => (AFP !== undefined ? utils.validatePositiveNumber(AFP, "AFP") : { valid: true }),
     () => (rent !== undefined ? utils.validatePositiveNumber(rent, "Rent") : { valid: true }),
     () => (additionalPay !== undefined ? utils.validatePositiveNumber(additionalPay, "Additional pay") : { valid: true }),
@@ -125,6 +143,8 @@ registerEmployeeController.personalInfo = async (req, res) => {
       return res.status(401).json({ message: "The email has not been verified." });
     }
 
+    // personalInfo y workInfo se mantienen como dos objetos separados en el
+    // token, igual a como luego se dividirán en el schema de Mongoose
     const infoToken = emailUtils.generateToken(
       {
         email: decoded.email,
@@ -143,6 +163,7 @@ registerEmployeeController.personalInfo = async (req, res) => {
           AFP: Number(AFP) || 0,
           rent: Number(rent) || 0,
           additionalPay: Number(additionalPay) || 0,
+          // Acepta tanto un booleano real como el string "true" (común en bodies form-data/multipart)
           workInsurance: workInsurance === true || workInsurance === "true",
         },
       },
@@ -165,6 +186,13 @@ registerEmployeeController.personalInfo = async (req, res) => {
   }
 };
 
+/**
+ * PASO 4 — Establecer contraseña y guardar
+ * Valida la contraseña, vuelve a chequear correos duplicados, la hashea, y
+ * persiste al empleado. A diferencia de los admins, los empleados nuevos
+ * arrancan con `isAuthorized: false` — necesitan aprobación explícita
+ * (probablemente de un admin) antes de poder iniciar sesión y trabajar.
+ */
 registerEmployeeController.setPassword = async (req, res) => {
   const { password } = req.body;
 
@@ -181,6 +209,7 @@ registerEmployeeController.setPassword = async (req, res) => {
 
     const decoded = emailUtils.verifyToken(token);
     if (!decoded.emailVerified || !decoded.personalInfo || !decoded.workInfo) {
+      // Tanto personalInfo como workInfo deben existir — confirma que el paso 3 corrió completo
       return res.status(401).json({ message: "Incomplete registration. Please start over." });
     }
 
@@ -216,7 +245,7 @@ registerEmployeeController.setPassword = async (req, res) => {
         rent: workInfo.rent,
         additionalPay: workInfo.additionalPay,
         workInsurance: workInfo.workInsurance,
-        isAuthorized: false,
+        isAuthorized: false, // requiere aprobación manual antes de que la cuenta sea utilizable
         status: "active",
       },
     });
