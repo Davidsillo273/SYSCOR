@@ -15,6 +15,7 @@ Licencia
 
 Descripción General
 El proyecto surge como respuesta a los desafíos operativos identificados en Taquería El Corral: desorden en el registro de compras, dificultades en la gestión del personal, pérdida de ventas en horarios de alta demanda, y ausencia de herramientas para la administración de eventos. SYSCOR centraliza estas áreas en un sistema unificado, reduciendo errores humanos y mejorando la eficiencia general del negocio.
+Sistema realizado utilizando formato de camelCase
 
 Funcionalidades
 Control de Compras e IVA
