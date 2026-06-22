@@ -1,6 +1,6 @@
-import mongoose, { Schema, model } from "mongoose";
+import mongoose from "mongoose";
 
-const employeeSchema = new Schema(
+const employeeSchema = new mongoose.Schema(
   {
     personalInfo: {
       name: { type: String, required: true, trim: true },
@@ -35,15 +35,24 @@ const employeeSchema = new Schema(
         default: "active",
       },
     },
+    // Permisos granulares específicos de este empleado (ej. "menu:create").
+    // El admin los asigna al invitar o al editar el perfil del empleado.
+    // Validado contra el catálogo oficial en utils/permissionsCatalog.js
     permissions: {
-      type: [String], 
-      default: [],    
-    }
+      type: [String],
+      default: [],
+    },
+    // Se incrementa cada vez que el admin modifica los permisos de este
+    // empleado. El JWT lleva una "foto" de este número al momento del
+    // login; si no coincide con el valor actual en la DB, la sesión se
+    // considera vieja y se rechaza — obligando a un nuevo login que trae
+    // los permisos actualizados.
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
   },
-  {
-    timestamps: true,
-    strict: true,
-  },
+  { timestamps: true }
 );
 
-export default model("Employees", employeeSchema);
+export default mongoose.model("Employee", employeeSchema);

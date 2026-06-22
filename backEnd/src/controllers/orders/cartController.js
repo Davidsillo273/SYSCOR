@@ -43,6 +43,7 @@ cartController.getCartById = async (req, res) => {
 cartController.insertCart = async (req, res) => {
   try {
     const { idCustomer, details, status } = req.body;
+
     let totalGeneral = 0;
     let processedDetails = [];
 
@@ -118,6 +119,7 @@ cartController.insertCart = async (req, res) => {
 cartController.updateCart = async (req, res) => {
   try {
     const { idCustomer, details, status } = req.body;
+
     let totalGeneral = 0;
     let processedDetails = [];
 

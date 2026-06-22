@@ -3,6 +3,8 @@ import crypto from "crypto";
 import jsonwebtoken from "jsonwebtoken";
 import { config } from "../../../config.js";
 
+// ─── Token & Code ────────────────────────────────────────────────────────────
+
 const generateVerificationCode = () => {
   return crypto.randomBytes(3).toString("hex").toUpperCase();
 };
@@ -14,6 +16,8 @@ const generateToken = (payload, expiresIn = "15m") => {
 const verifyToken = (token) => {
   return jsonwebtoken.verify(token, config.JWT.secret);
 };
+
+// ─── Mailer ──────────────────────────────────────────────────────────────────
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -40,6 +44,8 @@ const sendEmail = async (to, subject, html) => {
   }
 };
 
+// ─── HTML Templates ──────────────────────────────────────────────────────────
+
 const HTMLVerificationEmail = (code) => `
 <!DOCTYPE html>
 <html lang="es">
@@ -52,7 +58,7 @@ const HTMLVerificationEmail = (code) => `
                style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
           <tr>
             <td style="background:#B22222;padding:32px;text-align:center;">
-              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;"> SYSCOR</h1>
+              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;">🌮 SYSCOR</h1>
               <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Taquería El Corral</p>
             </td>
           </tr>
@@ -85,6 +91,7 @@ const HTMLVerificationEmail = (code) => `
 </body>
 </html>
 `;
+
 const HTMLRecoveryEmail = (code) => `
 <!DOCTYPE html>
 <html lang="es">
@@ -97,7 +104,7 @@ const HTMLRecoveryEmail = (code) => `
                style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
           <tr>
             <td style="background:#B22222;padding:32px;text-align:center;">
-              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;"> SYSCOR</h1>
+              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;">🌮 SYSCOR</h1>
               <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Taquería El Corral</p>
             </td>
           </tr>
@@ -114,13 +121,68 @@ const HTMLRecoveryEmail = (code) => `
                 </span>
               </div>
               <p style="margin:0;color:#888;font-size:13px;">
-                Si no solicitaste este cambio, por favor ignora este correo.
+                Si no solicitaste este cambio, puedes ignorar este mensaje.
               </p>
             </td>
           </tr>
           <tr>
             <td style="background:#fafafa;padding:16px;text-align:center;border-top:1px solid #eee;">
-              <p style="margin:0;color:#aaa;font-size:12px;">© 2026 Taquería El Corral · SYSCOR</p>
+              <p style="margin:0;color:#aaa;font-size:12px;">© 2025 Taquería El Corral · SYSCOR</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+/**
+ * Email de invitación. Usado cuando un Admin invita a otro Admin o a un
+ * Empleado a unirse a SYSCOR. El link lleva un token firmado que el
+ * destinatario usa para completar su propio registro (set password, etc.).
+ *
+ * @param {string} link - URL de aceptación de invitación, con el token como query param.
+ * @param {string} roleLabel - Texto a mostrar para el rol invitado (ej. "Administrador", "Empleado").
+ */
+const HTMLInvitationEmail = (link, roleLabel) => `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0"
+               style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+          <tr>
+            <td style="background:#B22222;padding:32px;text-align:center;">
+              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;">🌮 SYSCOR</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Taquería El Corral</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 48px;text-align:center;">
+              <h2 style="margin:0 0 12px;color:#1a1a1a;font-size:20px;">Has sido invitado</h2>
+              <p style="margin:0 0 32px;color:#555;font-size:15px;line-height:1.6;">
+                Fuiste invitado a unirte a SYSCOR como <strong style="color:#B22222;">${roleLabel}</strong>.
+                Haz clic en el botón para completar tu registro. Este enlace expira en <strong>24 horas</strong>.
+              </p>
+              <a href="${link}" target="_blank"
+                 style="display:inline-block;background:#B22222;color:#fff;
+                        text-decoration:none;font-weight:700;font-size:15px;border-radius:8px;
+                        padding:16px 40px;margin-bottom:24px;">
+                Completar registro
+              </a>
+              <p style="margin:0;color:#888;font-size:13px;">
+                Si no esperabas esta invitación, puedes ignorar este correo.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#fafafa;padding:16px;text-align:center;border-top:1px solid #eee;">
+              <p style="margin:0;color:#aaa;font-size:12px;">© 2025 Taquería El Corral · SYSCOR</p>
             </td>
           </tr>
         </table>
@@ -137,5 +199,6 @@ export default {
   verifyToken,
   sendEmail,
   HTMLVerificationEmail,
-  HTMLRecoveryEmail
+  HTMLRecoveryEmail,
+  HTMLInvitationEmail,
 };

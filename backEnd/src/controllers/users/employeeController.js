@@ -1,6 +1,7 @@
 import employeeModel from "../../models/users/employeeModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
+import invitationValidationsUtils from "../../utils/auth/invitationValidationsUtils.js";
 
 const employeeController = {};
 
@@ -10,18 +11,6 @@ employeeController.getEmployees = async (req, res) => {
         return res.status(200).json(employees);
     } catch (error) {
         console.error("Error getting employees:", error);
-        return res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-employeeController.deleteEmployee = async (req, res) => {
-    try {
-        const deleted = await crudUtils.deleteDocumentById(employeeModel, req.params.id);
-        if (!deleted) return res.status(404).json({ message: "Employee not found" });
-
-        return res.status(200).json({ message: "Employee deleted successfully" });
-    } catch (error) {
-        console.error("Error deleting employee:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -50,11 +39,19 @@ employeeController.updateEmployee = async (req, res) => {
             updateData["personalInfo.address"] = address.trim();
         }
         if (type !== undefined) {
-            updateData["personalInfo.type"] = type; // Podrías añadir un validador de enum aquí si lo deseas
+            validationsToRun.push(() => invitationValidationsUtils.validateEmployeeType(type));
+            updateData["personalInfo.type"] = type;
         }
         if (salary !== undefined) {
             validationsToRun.push(() => validationUtils.validatePositiveNumber(salary, "Salary"));
             updateData["workInfo.salary"] = Number(salary);
+        }
+
+        // req.file lo agrega multer (la ruta debe tener upload.single("image")).
+        // Solo se actualiza la imagen si efectivamente se mandó un archivo
+        // nuevo — si no, el campo image existente en la DB no se toca.
+        if (req.file) {
+            updateData["personalInfo.image"] = req.file.path;
         }
 
         // Ejecutar todas las validaciones acumuladas
@@ -66,7 +63,7 @@ employeeController.updateEmployee = async (req, res) => {
         const updatedEmployee = await employeeModel.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
-            { new: true }
+            { new: true, runValidators: true }
         ).select("-loginInfo.password");
 
         if (!updatedEmployee) return res.status(404).json({ message: "Employee not found" });
