@@ -9,7 +9,7 @@ import inventoryRoutes from "../inventory/inventoryRoutes.js";
 import customerRoutes from "../users/customerRoutes.js";
 import employeeRoutes from "../users/employeeRoutes.js";
 import adminRoutes from "../users/adminRoutes.js";
-import wompiRoutes from "../wompiRoutes.js";
+import wompiRoutes from "../orders/wompiRoutes.js";
 
 // Aquí importamos todas las rutas de cada módulo
 
