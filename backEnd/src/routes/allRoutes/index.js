@@ -11,13 +11,13 @@ import adminRoutes from "../users/adminRoutes.js";
 // Aquí importamos todas las rutas de cada módulo
 
 //auth - customers
-import registerCustomerRoutes from "../auth/customers/registerCustomerRoutes.js";
 import loginCustomerRoutes from "../auth/customers/loginCustomerRoutes.js";
+import registerCustomerRoutes from "../auth/customers/registerCustomerRoutes.js";
 //auth - employees
-import registerEmployeeRoutes from "../auth/employees/registerEmployeeRoutes.js";
+import inviteEmployeeRoutes from "../auth/employees/inviteEmployeeRoutes.js";
 import loginEmployeeRoutes from "../auth/employees/loginEmployeeRoutes.js";
 //auth - admins
-import registerAdminRoutes from "../auth/admins/registerAdminRoutes.js";
+import inviteAdminRoutes from "../auth/admins/inviteAdminRoutes.js";
 import loginAdminRoutes from "../auth/admins/loginAdminRoutes.js";
 
 //auth - logout
@@ -45,10 +45,10 @@ router.use("/admins", validateAuthCookie(["admin"]), adminRoutes);
 router.use("/auth/customers/register", registerCustomerRoutes);
 router.use("/auth/customers/login", loginCustomerRoutes);
 //auth - employees
-router.use("/auth/employees/register", validateAuthCookie(["employee"]), registerEmployeeRoutes);
+router.use("/auth/employees/invite", inviteEmployeeRoutes);
 router.use("/auth/employees/login", loginEmployeeRoutes);
 //auth - admins
-router.use("/auth/admins/register", validateAuthCookie(["admin"]), registerAdminRoutes);
+router.use("/auth/admins/invite", inviteAdminRoutes);
 router.use("/auth/admins/login", loginAdminRoutes);
 
 //auth - logout

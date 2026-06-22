@@ -38,7 +38,14 @@ const processLogin = async (Model, email, password, role) => {
     const tokenPayload = {
         id: userFound._id,
         role: role,
-        permissions: userFound.permissions || []
+        // Los permisos granulares solo existen en Employee (admin tiene
+        // acceso total implícito vía requirePermission). userFound.permissions
+        // será undefined para Admin/Customer, así que cae al array vacío.
+        permissions: userFound.permissions || [],
+        // "Foto" del tokenVersion actual en la DB al momento del login.
+        // Si el admin luego cambia los permisos de este empleado, el
+        // tokenVersion en la DB sube y este JWT queda desactualizado.
+        tokenVersion: userFound.tokenVersion || 0
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET || config.JWT.secret, { expiresIn: "30d" });

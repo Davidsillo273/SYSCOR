@@ -29,6 +29,13 @@ adminController.updateAdmin = async (req, res) => {
             updateData["personalInfo.lastname"] = lastname.trim();
         }
 
+        // req.file lo agrega multer (la ruta debe tener upload.single("image")).
+        // Solo se actualiza la imagen si efectivamente se mandó un archivo
+        // nuevo — si no, el campo image existente en la DB no se toca.
+        if (req.file) {
+            updateData["personalInfo.image"] = req.file.path;
+        }
+
         if (validationsToRun.length > 0) {
             const result = validationUtils.runValidations(validationsToRun);
             if (!result.valid) return res.status(400).json({ message: result.message });
@@ -37,7 +44,7 @@ adminController.updateAdmin = async (req, res) => {
         const updatedAdmin = await adminModel.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
-            { new: true }
+            { new: true, runValidators: true }
         ).select("-loginInfo.password");
 
         if (!updatedAdmin) return res.status(404).json({ message: "Admin not found" });
