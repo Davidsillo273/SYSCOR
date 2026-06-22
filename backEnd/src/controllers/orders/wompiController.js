@@ -3,7 +3,6 @@ import cartModel from "../../models/orders/cartModel.js";
 
 const wompiController = {};
 
-// Generar el token de acceso OAuth para autenticar con la API de Wompi
 wompiController.generarToken = async (req, res) => {
     try {
         const response = await fetch("https://id.wompi.sv/connect/token", {
@@ -35,12 +34,10 @@ wompiController.generarToken = async (req, res) => {
     }
 };
 
-// Procesar transacción (Prueba o Real) vinculada al carrito
 wompiController.paymentTest = async (req, res) => {
     try {
         const { token, cardToken, cartId } = req.body;
 
-        // Buscamos el carrito en la DB para obtener el monto real calculado
         const cartFound = await cartModel.findById(cartId).populate("idCustomer");
         if (!cartFound) {
             return res.status(404).json({ message: "Carrito no encontrado" });
@@ -72,7 +69,6 @@ wompiController.paymentTest = async (req, res) => {
             return res.status(response.status).json(result);
         }
 
-        // Si el pago es exitoso, marcamos el carrito como completado
         cartFound.status = "paid";
         await cartFound.save();
 
@@ -85,7 +81,5 @@ wompiController.paymentTest = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
-
-// Aquí iría la lógica de https://api.wompi.sv/TransaccionCompra/3Ds
 
 export default wompiController;

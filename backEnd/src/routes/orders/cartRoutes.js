@@ -1,13 +1,15 @@
-import { Router } from "express";
-import cartController from "../../controllers/orders/cartController.js";
+import express from "express";
+import cartController from "../controller/cartController.js";
 
-const router = Router();
+const router = express.Router();
 
-// Definición de rutas para el carrito
-router.get("/", cartController.getAllCarts);
-router.get("/:id", cartController.getCartById);
-router.post("/", cartController.insertCart);
-router.put("/:id", cartController.updateCart);
-router.delete("/:id", cartController.deleteCart);
+router.route("/")
+  .get(cartController.getAllCarts)
+  .post(cartController.insertCart);
+
+router.route("/:id")
+  .get(cartController.getCartById)
+  .put(cartController.updateCart)
+  .delete(cartController.deleteCart);
 
 export default router;
