@@ -10,6 +10,8 @@ router
   .get(validateAuthCookie(["admin"]),saucersController.getAllSaucers)
   .post(validateAuthCookie(["admin"]), upload.single("image"), saucersController.insertSaucer);
 
+  router.get("/active", validateAuthCookie(["customer", "admin"]), saucersController.getActiveSaucers);
+  
 router
   .route("/:id")
   .put(validateAuthCookie(["admin"]), upload.single("image"), saucersController.updateSaucer)

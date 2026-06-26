@@ -7,12 +7,14 @@ const router = express.Router();
 
 // Obtener todos los combos y crear uno nuevo
 router.route("/")
-    .get(validateAuthCookie(["admin"]),combosController.getAllCombos)
+    .get(validateAuthCookie(["admin"]), combosController.getAllCombos)
     .post(validateAuthCookie(["admin"]), upload.single("image"), combosController.insertCombo);
+
+// Obtener solo los combos activos
+router.get("/active", validateAuthCookie(["customer", "admin"]), combosController.getActiveCombos);
 
 // Obtener un combo por ID, actualizarlo y eliminarlo
 router.route("/:id")
-    .get(combosController.getComboById)
     .put(validateAuthCookie(["admin"]), upload.single("image"), combosController.updateCombo)
     .delete(validateAuthCookie(["admin"]), combosController.deleteCombo);
 

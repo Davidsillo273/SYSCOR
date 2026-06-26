@@ -18,6 +18,22 @@ combosController.getAllCombos = async (req, res) => {
   }
 };
 
+
+combosController.getActiveCombos = async (req, res) => {
+  try {
+    const combos = await combosModel
+      .find({ status: "activo" })
+      .populate("saucersId")
+      .populate("drinksId");
+
+    return res.status(200).json(combos);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 combosController.getComboById = async (req, res) => {
   try {
     const combo = await combosModel
