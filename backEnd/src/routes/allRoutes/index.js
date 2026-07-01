@@ -35,14 +35,14 @@ const router = Router();
 
 //Nombres de los endpoints
 router.use("/carts", validateAuthCookie(["customer"]), cartRoutes);
-router.use("/extras", validateAuthCookie(["customer", "admin"]), extrasRouters);
-router.use("/drinks", validateAuthCookie(["customer", "admin"]), drinksRouters);
-router.use("/saucers", validateAuthCookie(["customer", "admin"]), saucerRouters);
-router.use("/combos", validateAuthCookie(["customer", "admin"]), combosRouters);
-router.use("/inventory", validateAuthCookie(["admin"]), inventoryRoutes);
-router.use("/customers", validateAuthCookie(["admin"]), customerRoutes);
-router.use("/employees", validateAuthCookie(["admin"]), employeeRoutes);
-router.use("/admins", validateAuthCookie(["admin"]), adminRoutes);
+router.use("/extras",extrasRouters);
+router.use("/drinks", drinksRouters);
+router.use("/saucers",saucerRouters);
+router.use("/combos", combosRouters);
+router.use("/inventory",inventoryRoutes);
+router.use("/customers", customerRoutes);
+router.use("/employees",employeeRoutes);
+router.use("/admins", adminRoutes);
 
 //Wompi
 router.use("/wompi", wompiRoutes);

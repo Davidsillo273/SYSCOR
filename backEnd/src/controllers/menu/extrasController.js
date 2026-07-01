@@ -14,6 +14,18 @@ extrasController.getExtras = async (req, res) => {
   }
 };
 
+extrasController.getActiveExtras = async (req, res) => {
+  try {
+    const extras = await extrasModel.find({ status: "activo" });
+
+    return res.status(200).json(extras);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 extrasController.insertExtras = async (req, res) => {
   try {
     let { name, price, status } = req.body;

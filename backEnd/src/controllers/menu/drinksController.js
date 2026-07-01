@@ -15,6 +15,18 @@ drinksController.getAllDrinks = async (req, res) => {
   }
 };
 
+drinksController.getActiveDrinks = async (req, res) => {
+  try {
+    const drinks = await drinkModel.find({ status: "activo" });
+
+    return res.status(200).json(drinks);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 drinksController.insertDrink = async (req, res) => {
   try {
     const { name, price, quantity, status } = req.body;

@@ -14,6 +14,17 @@ saucersController.getAllSaucers = async (req, res) => {
   }
 };
 
+saucersController.getActiveSaucers = async (req, res) => {
+  try {
+    const saucers = await saucersModel.find({ status: "activo" });
+
+    return res.status(200).json(saucers);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 saucersController.insertSaucer = async (req, res) => {
   try {
     const { name, category, price, status } = req.body;

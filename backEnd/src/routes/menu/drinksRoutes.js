@@ -10,6 +10,8 @@ router
   .get(validateAuthCookie(["admin"]), drinksController.getAllDrinks)
   .post(validateAuthCookie(["admin"]), upload.single("image"), drinksController.insertDrink);
 
+router.get("/active", validateAuthCookie(["customer", "admin"]), drinksController.getActiveDrinks);
+
 router
   .route("/:id")
   .put(validateAuthCookie(["admin"]), upload.single("image"), drinksController.updateDrink)

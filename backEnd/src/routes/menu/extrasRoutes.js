@@ -9,6 +9,8 @@ router
   .get(validateAuthCookie(["admin"]), extrasController.getExtras)
   .post(validateAuthCookie(["admin"]), extrasController.insertExtras);
 
+  router.get("/active", validateAuthCookie(["customer", "admin"]), extrasController.getActiveExtras);
+
 router
   .route("/:id")
   .put(validateAuthCookie(["admin"]), extrasController.updateExtra)
