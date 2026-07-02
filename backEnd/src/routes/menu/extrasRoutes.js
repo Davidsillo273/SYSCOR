@@ -6,14 +6,14 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(validateAuthCookie(["admin"]), extrasController.getExtras)
-  .post(validateAuthCookie(["admin"]), extrasController.insertExtras);
+  .get(extrasController.getExtras)
+  .post(extrasController.insertExtras);
 
 router.get("/active", validateAuthCookie(["customer", "admin"]), extrasController.getActiveExtras);
 
 router
   .route("/:id")
-  .put(validateAuthCookie(["admin"]), extrasController.updateExtra)
-  .delete(validateAuthCookie(["admin"]), extrasController.deleteExtra);
+  .put(extrasController.updateExtra)
+  .delete( extrasController.deleteExtra);
 
 export default router;
