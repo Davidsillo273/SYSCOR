@@ -1,5 +1,5 @@
 import express from "express";
-import tablesController from "../../controllers/menu/tablesController.js";
+import tablesController from "../../controllers/tables/tablesController.js";
 import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
 
 const router = express.Router();
