@@ -7,14 +7,14 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(saucersController.getAllSaucers)
-  .post(upload.single("image"), saucersController.insertSaucer);
+  .get(validateAuthCookie(["admin"]),saucersController.getAllSaucers)
+  .post(validateAuthCookie(["admin"]), upload.single("image"), saucersController.insertSaucer);
 
   router.get("/active", validateAuthCookie(["customer", "admin"]), saucersController.getActiveSaucers);
   
 router
   .route("/:id")
-  .put(upload.single("image"), saucersController.updateSaucer)
-  .delete(saucersController.deleteSaucer);
+  .put(validateAuthCookie(["admin"]), upload.single("image"), saucersController.updateSaucer)
+  .delete(validateAuthCookie(["admin"]), saucersController.deleteSaucer);
 
 export default router;

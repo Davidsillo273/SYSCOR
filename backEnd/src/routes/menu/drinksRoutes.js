@@ -7,14 +7,14 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(drinksController.getAllDrinks)
-  .post(upload.single("image"), drinksController.insertDrink);
+  .get(validateAuthCookie(["admin"]), drinksController.getAllDrinks)
+  .post(validateAuthCookie(["admin"]), upload.single("image"), drinksController.insertDrink);
 
 router.get("/active", validateAuthCookie(["customer", "admin"]), drinksController.getActiveDrinks);
 
 router
   .route("/:id")
-  .put(upload.single("image"), drinksController.updateDrink)
-  .delete(drinksController.deleteDrink);
+  .put(validateAuthCookie(["admin"]), upload.single("image"), drinksController.updateDrink)
+  .delete(validateAuthCookie(["admin"]), drinksController.deleteDrink);
 
 export default router;

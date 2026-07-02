@@ -8,7 +8,7 @@ router
   .get( extrasController.getExtras)
   .post( extrasController.insertExtras);
 
-  router.get (extrasController.getActiveExtras);
+  router.get("/active", extrasController.getActiveExtras);
 
 router
   .route("/:id")
