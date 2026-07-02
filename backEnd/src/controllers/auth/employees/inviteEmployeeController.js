@@ -1,3 +1,4 @@
+// Importamos los modelos y utilidades necesarios para gestionar empleados, enviar correos y validar datos
 import employeeModel from "../../../models/users/employeeModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";

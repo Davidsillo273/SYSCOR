@@ -1,3 +1,4 @@
+// Importamos el modelo y las utilidades para consultar y validar la información de empleados
 import employeeModel from "../../models/users/employeeModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
@@ -5,6 +6,7 @@ import invitationValidationsUtils from "../../utils/auth/invitationValidationsUt
 
 const employeeController = {};
 
+// Obtiene la lista de todos los empleados
 employeeController.getEmployees = async (req, res) => {
     try {
         const employees = await crudUtils.searchDocuments(employeeModel, req.query);
@@ -15,6 +17,7 @@ employeeController.getEmployees = async (req, res) => {
     }
 };
 
+// Actualiza los datos de un empleado (nombre, apellido, teléfono, dirección, tipo de rol, salario o imagen)
 employeeController.updateEmployee = async (req, res) => {
     try {
         const { name, lastname, phone, address, type, salary } = req.body;

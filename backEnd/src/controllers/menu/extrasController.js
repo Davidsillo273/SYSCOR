@@ -1,9 +1,10 @@
 const extrasController = {};
 
+// Importamos el modelo de los extras (complementos) y sus validaciones
 import extrasModel from "../../models/menu/extrasModel.js";
 import validationsExtras from "../../utils/extras/validationsExtrasUtils.js";
 
-
+// Obtiene todos los complementos (extras) del menú, sin importar su estado
 extrasController.getExtras = async (req, res) => {
   try {
     const extras = await extrasModel.find();
@@ -14,10 +15,10 @@ extrasController.getExtras = async (req, res) => {
   }
 };
 
+// Obtiene solo los complementos que están activos (disponibles para venta)
 extrasController.getActiveExtras = async (req, res) => {
   try {
     const extras = await extrasModel.find({ status: "activo" });
-
     return res.status(200).json(extras);
   } catch (error) {
     console.log("error " + error);
@@ -25,32 +26,29 @@ extrasController.getActiveExtras = async (req, res) => {
   }
 };
 
-
+// Crea un nuevo complemento en el menú
 extrasController.insertExtras = async (req, res) => {
   try {
     let { name, price, status } = req.body;
 
+    // Validamos que el nombre, precio y estado tengan el formato correcto
     let validation = validationsExtras.validateName(name);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({message: validation.message});
 
     validation = validationsExtras.validatePrice(price);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({message: validation.message});
 
     validation = validationsExtras.validateStatus(status);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({message: validation.message});
 
+    // Creamos el nuevo complemento
     const newExtra = new extrasModel({
       name,
       price,
       status,
     });
 
+    // Guardamos en la base de datos
     await newExtra.save();
 
     return res.status(201).json({ message: "Extra saved" });
@@ -60,12 +58,12 @@ extrasController.insertExtras = async (req, res) => {
   }
 };
 
+// Elimina un complemento del menú
 extrasController.deleteExtra = async (req, res) => {
   try {
-    const deletedExtra = await extrasModel.findByIdAndDelete(
-      req.params.id
-    );
+    const deletedExtra = await extrasModel.findByIdAndDelete(req.params.id);
 
+    // Si no se encuentra el complemento, mostramos un error
     if (!deletedExtra) {
       return res.status(404).json({ message: "Extra not found" });
     }
@@ -77,33 +75,26 @@ extrasController.deleteExtra = async (req, res) => {
   }
 };
 
+// Actualiza un complemento existente (por ejemplo, cambiarle el precio)
 extrasController.updateExtra = async (req, res) => {
   try {
     let { name, price, status } = req.body;
 
+    // Validamos los datos nuevos
     let validation = validationsExtras.validateName(name);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({message: validation.message});
 
     validation = validationsExtras.validatePrice(price);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({message: validation.message});
 
     validation = validationsExtras.validateStatus(status);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({message: validation.message});
 
+    // Buscamos y actualizamos el complemento
     const extraUpdated = await extrasModel.findByIdAndUpdate(
       req.params.id,
-      {
-        name,
-        price,
-        status,
-      },
-      { new: true }
+      { name, price, status },
+      { new: true } // Para que nos devuelva el objeto ya actualizado
     );
 
     if (!extraUpdated) {

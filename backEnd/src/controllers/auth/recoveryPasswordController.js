@@ -1,3 +1,4 @@
+// Importamos bcrypt para encriptar las nuevas contraseñas y los modelos de usuarios
 import bcrypt from "bcryptjs";
 
 import Admin from "../../models/users/adminModel.js";

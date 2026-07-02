@@ -1,10 +1,12 @@
+// Importamos el modelo de las bebidas, Cloudinary para imágenes y validaciones
 import drinkModel from "../../models/menu/drinksModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsDrinks from "../../utils/drinks/validationsDrinksUtils.js";
 
-// Array de funciones
+// Creamos un objeto para agrupar todas las funciones de bebidas
 const drinksController = {};
 
+// Obtiene todas las bebidas guardadas en el menú
 drinksController.getAllDrinks = async (req, res) => {
   try {
     const drinks = await drinkModel.find();
@@ -15,6 +17,7 @@ drinksController.getAllDrinks = async (req, res) => {
   }
 };
 
+// Obtiene solo las bebidas que están marcadas como activas
 drinksController.getActiveDrinks = async (req, res) => {
   try {
     const drinks = await drinkModel.find({ status: "activo" });
@@ -27,6 +30,7 @@ drinksController.getActiveDrinks = async (req, res) => {
 };
 
 
+// Crea una nueva bebida en la base de datos (con imagen)
 drinksController.insertDrink = async (req, res) => {
   try {
     const { name, price, quantity, status } = req.body;
@@ -78,6 +82,7 @@ drinksController.insertDrink = async (req, res) => {
   }
 };
 
+// Elimina una bebida del menú y también borra su imagen de Cloudinary
 drinksController.deleteDrink = async (req, res) => {
   try {
     const drinkFound = await drinkModel.findById(req.params.id);
@@ -93,6 +98,7 @@ drinksController.deleteDrink = async (req, res) => {
   }
 };
 
+// Actualiza los datos de una bebida (precio, nombre, o si sube una imagen nueva)
 drinksController.updateDrink = async (req, res) => {
   try {
     const { name, price, quantity, status } = req.body;
@@ -126,6 +132,7 @@ drinksController.updateDrink = async (req, res) => {
       status,
     };
 
+    // Si el usuario envió una imagen nueva, borramos la vieja y guardamos la nueva
     if (req.file) {
       await cloudinary.uploader.destroy(drinkFound.public_id);
 

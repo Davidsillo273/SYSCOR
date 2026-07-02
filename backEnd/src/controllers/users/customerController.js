@@ -1,9 +1,11 @@
+// Importamos el modelo y utilidades para poder gestionar a los clientes (customers)
 import customerModel from "../../models/users/customerModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 
 const customerController = {};
 
+// Obtiene la lista de clientes registrados en la plataforma
 customerController.getCustomers = async (req, res) => {
     try {
         const customers = await crudUtils.searchDocuments(customerModel, req.query);
@@ -14,6 +16,7 @@ customerController.getCustomers = async (req, res) => {
     }
 };
 
+// Actualiza los datos de un cliente (nombre o apellidos) y lo guarda en la base de datos
 customerController.updateCustomer = async (req, res) => {
     try {
         const { name, lastname } = req.body;

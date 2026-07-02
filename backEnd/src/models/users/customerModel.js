@@ -1,40 +1,42 @@
+// Importamos mongoose para el modelo de datos
 import mongoose, { Schema, model } from "mongoose";
 
+// Sub-esquema para guardar las tarjetas de pago del cliente
 const cardSchema = new Schema(
   {
-    token: { type: String, required: true },
-    lastFour: { type: String, required: true, maxlength: 4 },
+    token: { type: String, required: true }, // Token seguro del banco
+    lastFour: { type: String, required: true, maxlength: 4 }, // Últimos 4 dígitos para mostrar
     brand: { type: String, required: true, enum: ["VISA", "MASTERCARD", "AMEX", "DINERS", "OTHER"] },
     cardHolder: { type: String, required: true },
-    isDefault: { type: Boolean, default: false },
+    isDefault: { type: Boolean, default: false }, // ¿Es su tarjeta principal?
   },
-  {
-    _id: false,
-  },
+  { _id: false }, // No necesitamos un ID interno para cada tarjeta
 );
 
+// Sub-esquema para las direcciones de envío
 const addressSchema = new Schema(
   {
-    tag: { type: String, required: true },
-    details: { type: String, required: true },
+    tag: { type: String, required: true }, // Ej. "Casa", "Trabajo"
+    details: { type: String, required: true }, // Dirección completa
     isDefault: { type: Boolean, default: false },
   },
-  {
-    _id: false,
-  },
+  { _id: false },
 );
 
+// Estructura principal del Cliente
 const customerSchema = new Schema(
   {
+    // Datos personales
     personalInfo: {
       name: { type: String, required: true, trim: true },
       lastname: { type: String, required: true, trim: true },
       image: { type: String, default: null },
       birthdate: { type: Date, default: null },
-      addresses: { type: [addressSchema], default: [] },
+      addresses: { type: [addressSchema], default: [] }, // Lista de direcciones
       phones: { type: [String], default: [] },
-      cards: { type: [cardSchema], default: [] },
+      cards: { type: [cardSchema], default: [] }, // Lista de tarjetas guardadas
     },
+    // Credenciales para iniciar sesión
     loginInfo: {
       email: { type: String, required: true, unique: true, lowercase: true, trim: true },
       password: { type: String, required: true },
@@ -42,6 +44,7 @@ const customerSchema = new Schema(
       loginAttempts: { type: Number, default: 0 },
       timeOut: { type: Date, default: null },
     },
+    // Productos favoritos del menú
     favorites: {
       type: [{ type: Schema.Types.ObjectId, ref: "Products" }],
       default: [],

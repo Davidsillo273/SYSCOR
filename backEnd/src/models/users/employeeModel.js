@@ -1,20 +1,25 @@
+// Importamos mongoose
 import mongoose from "mongoose";
 
+// Estructura de datos para un Empleado
 const employeeSchema = new mongoose.Schema(
   {
+    // Información personal y de contacto
     personalInfo: {
       name: { type: String, required: true, trim: true },
       lastname: { type: String, required: true, trim: true },
-      DUI_NIT: { type: String, required: true, trim: true },
+      DUI_NIT: { type: String, required: true, trim: true }, // Documentos de identidad
       address: { type: String, required: true, trim: true },
       phone: { type: String, required: true, trim: true },
       image: { type: String, default: null },
+      // Puesto de trabajo del empleado
       type: {
         type: String,
         required: true,
         enum: ["kitchen", "waiter", "cashier", "manager", "cleaner", "other"],
       },
     },
+    // Datos para ingresar al sistema
     loginInfo: {
       email: { type: String, required: true, unique: true, lowercase: true, trim: true },
       password: { type: String, required: true },
@@ -22,31 +27,28 @@ const employeeSchema = new mongoose.Schema(
       loginAttempts: { type: Number, default: 0 },
       timeOut: { type: Date, default: null },
     },
+    // Información laboral y salarial
     workInfo: {
-      workInsurance: { type: Boolean, default: false },
-      AFP: { type: Number, default: 0 },
-      rent: { type: Number, default: 0 },
-      salary: { type: Number, required: true },
-      additionalPay: { type: Number, default: 0 },
+      workInsurance: { type: Boolean, default: false }, // Seguro médico
+      AFP: { type: Number, default: 0 }, // Fondo de pensiones
+      rent: { type: Number, default: 0 }, // Retención de impuestos
+      salary: { type: Number, required: true }, // Sueldo base
+      additionalPay: { type: Number, default: 0 }, // Bonos extras
       isAuthorized: { type: Boolean, default: false },
       status: {
         type: String,
         enum: ["active", "inactive", "suspended", "on_leave"],
-        default: "active",
+        default: "active", // Estado actual en la empresa
       },
     },
     // Permisos granulares específicos de este empleado (ej. "menu:create").
     // El admin los asigna al invitar o al editar el perfil del empleado.
-    // Validado contra el catálogo oficial en utils/permissionsCatalog.js
     permissions: {
       type: [String],
       default: [],
     },
-    // Se incrementa cada vez que el admin modifica los permisos de este
-    // empleado. El JWT lleva una "foto" de este número al momento del
-    // login; si no coincide con el valor actual en la DB, la sesión se
-    // considera vieja y se rechaza — obligando a un nuevo login que trae
-    // los permisos actualizados.
+    // Sirve para forzar el cierre de sesión si un administrador
+    // le cambia los permisos a este empleado mientras está conectado.
     tokenVersion: {
       type: Number,
       default: 0,

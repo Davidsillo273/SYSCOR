@@ -1,8 +1,10 @@
-  import inventoryModel from "../../models//inventory/inventoryModel.js";
+// Importamos el modelo de inventario y la utilidad que valida los datos
+import inventoryModel from "../../models//inventory/inventoryModel.js";
 import validationsInventory from "../../utils/inventory/validationsInventoryUtils.js";
 
 const inventoryController = {};
 
+// Obtiene todos los productos registrados en el inventario
 inventoryController.getAllInventory = async (req, res) => {
   try {
     const inventory = await inventoryModel.find();
@@ -16,6 +18,7 @@ inventoryController.getAllInventory = async (req, res) => {
   }
 };
 
+// Busca un producto específico usando su ID
 inventoryController.getInventoryById = async (req, res) => {
   try {
     const inventory = await inventoryModel.findById(req.params.id);
@@ -35,6 +38,7 @@ inventoryController.getInventoryById = async (req, res) => {
   }
 };
 
+// Registra un nuevo producto en el inventario
 inventoryController.insertInventory = async (req, res) => {
   try {
     const {
@@ -76,6 +80,9 @@ inventoryController.insertInventory = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    }
+
+    // Preparamos los datos del producto nuevo
     const newInventory = new inventoryModel({
       name,
       price,
@@ -85,6 +92,7 @@ inventoryController.insertInventory = async (req, res) => {
       status,
     });
 
+    // Guardamos el producto en la base de datos
     await newInventory.save();
 
     return res.status(201).json({
@@ -163,12 +171,16 @@ inventoryController.updateInventory = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    }
+
+    // Si todo es válido, buscamos el producto original para comprobar que existe
     const inventoryFound = await inventoryModel.findById(req.params.id);
 
     if (!inventoryFound) {
       return res.status(404).json({message: "Product not found",});
     }
 
+    // Agrupamos los datos nuevos
     const updatedData = {
       name,
       price,

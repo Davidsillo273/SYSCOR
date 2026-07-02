@@ -1,7 +1,9 @@
 const tablesController = {};
 
+// Importamos el modelo de las mesas para interactuar con la base de datos
 import tablesModel from "../../models/tables/tablesModels.js";
 
+// Obtiene todas las mesas registradas en el restaurante
 tablesController.getTables = async (req, res) => {
   try {
     const tables = await tablesModel.find();
@@ -12,10 +14,12 @@ tablesController.getTables = async (req, res) => {
   }
 };
 
+// Crea o registra una nueva mesa en el sistema
 tablesController.insertTable = async (req, res) => {
   try {
     let { number, status } = req.body;
 
+    // Validación básica: verificamos si el formato del número y estado son correctos
     let validation = validationsTables.validateNumber(number);
     if (!validation.valid) {
       return res.status(400).json({ message: validation.message });
@@ -26,11 +30,13 @@ tablesController.insertTable = async (req, res) => {
       return res.status(400).json({ message: validation.message });
     }
 
+    // Preparamos la nueva mesa para guardarla
     const newTable = new tablesModel({
       number,
       status,
     });
 
+    // Guardamos la mesa en la base de datos
     await newTable.save();
 
     return res.status(201).json({ message: "Table saved" });
@@ -40,10 +46,12 @@ tablesController.insertTable = async (req, res) => {
   }
 };
 
+// Elimina una mesa existente usando su ID
 tablesController.deleteTable = async (req, res) => {
   try {
     const deletedTable = await tablesModel.findByIdAndDelete(req.params.id);
 
+    // Si no encuentra la mesa, devuelve un error 404 (No encontrado)
     if (!deletedTable) {
       return res.status(404).json({ message: "Table not found" });
     }
@@ -55,6 +63,7 @@ tablesController.deleteTable = async (req, res) => {
   }
 };
 
+// Actualiza los datos de una mesa (por ejemplo, para cambiarla de libre a ocupada)
 tablesController.updateTable = async (req, res) => {
   try {
     let { number, status } = req.body;
@@ -69,13 +78,14 @@ tablesController.updateTable = async (req, res) => {
       return res.status(400).json({ message: validation.message });
     }
 
+    // Buscamos la mesa por su ID y le aplicamos los nuevos datos
     const tableUpdated = await tablesModel.findByIdAndUpdate(
       req.params.id,
       {
         number,
         status,
       },
-      { new: true }
+      { new: true } // Devuelve la versión más actualizada de la mesa
     );
 
     if (!tableUpdated) {

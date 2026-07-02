@@ -1,9 +1,12 @@
+// Importamos el modelo de los platillos, Cloudinary para imágenes y validaciones
 import saucersModel from "../../models/menu/saucersModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsSaucers from "../../utils/saucers/validationsSaucersUtils.js";
 
+// Objeto para agrupar todas las funciones de los platillos
 const saucersController = {};
 
+// Obtiene todos los platillos sin importar su estado
 saucersController.getAllSaucers = async (req, res) => {
   try {
     const saucers = await saucersModel.find();
@@ -14,6 +17,7 @@ saucersController.getAllSaucers = async (req, res) => {
   }
 };
 
+// Obtiene solo los platillos que están activos (disponibles para venta)
 saucersController.getActiveSaucers = async (req, res) => {
   try {
     const saucers = await saucersModel.find({ status: "activo" });
@@ -25,6 +29,7 @@ saucersController.getActiveSaucers = async (req, res) => {
   }
 };
 
+// Crea un nuevo platillo en el menú, incluyendo su imagen
 saucersController.insertSaucer = async (req, res) => {
   try {
     const { name, category, price, status } = req.body;
@@ -72,6 +77,7 @@ saucersController.insertSaucer = async (req, res) => {
   }
 };
 
+// Elimina un platillo del menú y borra la imagen asociada de Cloudinary
 saucersController.deleteSaucer = async (req, res) => {
   try {
     const saucerFound = await saucersModel.findById(req.params.id);
@@ -87,6 +93,7 @@ saucersController.deleteSaucer = async (req, res) => {
   }
 };
 
+// Actualiza un platillo (nombre, categoría, precio, estado y/o imagen)
 saucersController.updateSaucer = async (req, res) => {
   try {
     const { name, category, price, status } = req.body;
@@ -120,6 +127,7 @@ saucersController.updateSaucer = async (req, res) => {
       status,
     };
 
+    // Si hay una nueva imagen, borramos la antigua y registramos la nueva
     if (req.file) {
       await cloudinary.uploader.destroy(saucerFound.public_id);
 

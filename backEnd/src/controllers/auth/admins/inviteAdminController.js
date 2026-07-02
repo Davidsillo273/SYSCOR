@@ -1,3 +1,4 @@
+// Importamos los modelos y utilidades necesarias para gestionar invitaciones y envíos de correo
 import adminModel from "../../../models/users/adminModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";

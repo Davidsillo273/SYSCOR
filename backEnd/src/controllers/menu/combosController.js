@@ -1,9 +1,12 @@
+// Importamos el modelo de los combos, Cloudinary para imágenes y validaciones
 import combosModel from "../../models/menu/combosModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsCombos from "../../utils/combos/validationsCombosUtils.js";
 
+// Objeto para agrupar todas las funciones de los combos
 const combosController = {};
 
+// Obtiene todos los combos y también incluye (populate) los detalles de los platillos y bebidas que lo componen
 combosController.getAllCombos = async (req, res) => {
   try {
     const combos = await combosModel
@@ -19,6 +22,7 @@ combosController.getAllCombos = async (req, res) => {
 };
 
 
+// Obtiene solo los combos activos (disponibles para venta) con sus platillos y bebidas
 combosController.getActiveCombos = async (req, res) => {
   try {
     const combos = await combosModel
@@ -34,6 +38,7 @@ combosController.getActiveCombos = async (req, res) => {
 };
 
 
+// Busca un combo específico por su ID y trae todos los detalles (platillos y bebidas)
 combosController.getComboById = async (req, res) => {
   try {
     const combo = await combosModel
@@ -52,6 +57,7 @@ combosController.getComboById = async (req, res) => {
   }
 };
 
+// Crea un nuevo combo en la base de datos (con imagen incluida)
 combosController.insertCombo = async (req, res) => {
   try {
     const {
@@ -128,6 +134,7 @@ combosController.insertCombo = async (req, res) => {
   }
 };
 
+// Elimina un combo y su imagen alojada en Cloudinary
 combosController.deleteCombo = async (req, res) => {
   try {
     const comboFound = await combosModel.findById(req.params.id);
@@ -147,6 +154,7 @@ combosController.deleteCombo = async (req, res) => {
   }
 };
 
+// Actualiza un combo (detalles, platillos/bebidas que lo componen, precio, estado y/o imagen)
 combosController.updateCombo = async (req, res) => {
   try {
     const {
@@ -210,6 +218,7 @@ combosController.updateCombo = async (req, res) => {
       status,
     };
 
+    // Si nos envían una nueva imagen, eliminamos la vieja de Cloudinary y guardamos la nueva
     if (req.file) {
       await cloudinary.uploader.destroy(comboFound.public_id);
 

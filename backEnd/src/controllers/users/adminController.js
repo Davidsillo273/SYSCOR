@@ -1,9 +1,11 @@
+// Importamos el modelo y utilidades para poder buscar y validar administradores
 import adminModel from "../../models/users/adminModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 
 const adminController = {};
 
+// Obtiene la lista de todos los administradores registrados
 adminController.getAdmins = async (req, res) => {
     try {
         const admins = await crudUtils.searchDocuments(adminModel, req.query);
@@ -14,6 +16,7 @@ adminController.getAdmins = async (req, res) => {
     }
 };
 
+// Actualiza los datos de un administrador (como su nombre, apellido o foto de perfil)
 adminController.updateAdmin = async (req, res) => {
     try {
         const { name, lastname } = req.body;

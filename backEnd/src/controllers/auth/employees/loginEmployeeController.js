@@ -1,8 +1,11 @@
+// Importamos el modelo de empleados y utilidades para iniciar sesión
 import employeeModel from "../../../models/users/employeeModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 
 const loginEmployeeController = {};
+
+// Función principal para que los empleados inicien sesión
 loginEmployeeController.loginEmployee = async (req, res) => {
     try {
         const { email, password } = req.body;

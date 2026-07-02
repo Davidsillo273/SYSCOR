@@ -1,3 +1,4 @@
+// Importamos los modelos de los carritos y de los productos (combos, bebidas, extras) para calcular precios
 import cartModel from "../../models/orders/cartModel.js";
 import combosModel from "../../models/menu/combosModel.js";
 import drinksModel from "../../models/menu/drinksModel.js";
@@ -5,6 +6,7 @@ import extrasModel from "../../models/menu/extrasModel.js";
 
 const cartController = {};
 
+// Obtiene todos los carritos registrados y expande los detalles del cliente y productos
 cartController.getAllCarts = async (req, res) => {
   try {
     const carts = await cartModel
@@ -21,6 +23,7 @@ cartController.getAllCarts = async (req, res) => {
 };
 
 
+// Obtiene un carrito específico por su ID, mostrando toda su información detallada
 cartController.getCartById = async (req, res) => {
   try {
     const cart = await cartModel
@@ -40,6 +43,7 @@ cartController.getCartById = async (req, res) => {
 };
 
 
+// Registra un nuevo carrito, calculando matemáticamente los subtotales y el total general de los productos
 cartController.insertCart = async (req, res) => {
   try {
     const { idCustomer, details, status } = req.body;
@@ -116,6 +120,7 @@ cartController.insertCart = async (req, res) => {
 };
 
 
+// Actualiza un carrito (por ejemplo, si agregaron más productos), recalculando el total desde cero
 cartController.updateCart = async (req, res) => {
   try {
     const { idCustomer, details, status } = req.body;
@@ -191,7 +196,7 @@ cartController.updateCart = async (req, res) => {
   }
 };
 
-// DELETE
+// Elimina un carrito de compras usando su ID
 cartController.deleteCart = async (req, res) => {
   try {
     const cart = await cartModel.findByIdAndDelete(req.params.id);
