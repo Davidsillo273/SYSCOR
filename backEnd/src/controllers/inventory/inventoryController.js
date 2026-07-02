@@ -80,8 +80,6 @@ inventoryController.insertInventory = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    }
-
     // Preparamos los datos del producto nuevo
     const newInventory = new inventoryModel({
       name,
@@ -171,8 +169,6 @@ inventoryController.updateInventory = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    }
-
     // Si todo es válido, buscamos el producto original para comprobar que existe
     const inventoryFound = await inventoryModel.findById(req.params.id);
 
@@ -201,7 +197,7 @@ inventoryController.updateInventory = async (req, res) => {
     return res.status(200).json({
       message: "Product updated successfully",updatedInventory,
     });
-  } catch (error) {
+  }catch (error) {
     console.log("error " + error);
     return res.status(500).json({message: "Internal server error"});
   }
