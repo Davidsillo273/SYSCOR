@@ -19,17 +19,7 @@ tablesController.insertTable = async (req, res) => {
   try {
     let { number, status } = req.body;
 
-    // Validación básica: verificamos si el formato del número y estado son correctos
-    let validation = validationsTables.validateNumber(number);
-    if (!validation.valid) {
-      return res.status(400).json({ message: validation.message });
-    }
-
-    validation = validationsTables.validateStatus(status);
-    if (!validation.valid) {
-      return res.status(400).json({ message: validation.message });
-    }
-
+    
     // Preparamos la nueva mesa para guardarla
     const newTable = new tablesModel({
       number,
@@ -68,16 +58,7 @@ tablesController.updateTable = async (req, res) => {
   try {
     let { number, status } = req.body;
 
-    let validation = validationsTables.validateNumber(number);
-    if (!validation.valid) {
-      return res.status(400).json({ message: validation.message });
-    }
-
-    validation = validationsTables.validateStatus(status);
-    if (!validation.valid) {
-      return res.status(400).json({ message: validation.message });
-    }
-
+  
     // Buscamos la mesa por su ID y le aplicamos los nuevos datos
     const tableUpdated = await tablesModel.findByIdAndUpdate(
       req.params.id,
