@@ -6,12 +6,12 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(validateAuthCookie(["admin"]), tablesController.getTables)
-  .post(validateAuthCookie(["admin"]), tablesController.insertTable);
+  .get(tablesController.getTables)
+  .post(tablesController.insertTable);
 
 router
   .route("/:id")
-  .put(validateAuthCookie(["admin"]), tablesController.updateTable)
-  .delete(validateAuthCookie(["admin"]), tablesController.deleteTable);
+  .put(tablesController.updateTable)
+  .delete(tablesController.deleteTable);
 
 export default router;

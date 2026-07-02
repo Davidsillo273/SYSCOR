@@ -9,7 +9,9 @@ import inventoryRoutes from "../inventory/inventoryRoutes.js";
 import customerRoutes from "../users/customerRoutes.js";
 import employeeRoutes from "../users/employeeRoutes.js";
 import adminRoutes from "../users/adminRoutes.js";
-import wompiRoutes from "../orders/wompiRoutes.js";
+import wompiRoutes from "../orders/wompiRoutes.js"
+import tablesRoutes from "../tables/tablesRoutes.js"
+
 
 // Aquí importamos todas las rutas de cada módulo
 
@@ -34,7 +36,7 @@ import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
 const router = Router();
 
 //Nombres de los endpoints
-router.use("/carts", validateAuthCookie(["customer"]), cartRoutes);
+router.use("/carts", cartRoutes);
 router.use("/extras",extrasRouters);
 router.use("/drinks", drinksRouters);
 router.use("/saucers",saucerRouters);
@@ -43,6 +45,7 @@ router.use("/inventory",inventoryRoutes);
 router.use("/customers", customerRoutes);
 router.use("/employees",employeeRoutes);
 router.use("/admins", adminRoutes);
+router.use("/tables", tablesRoutes);
 
 //Wompi
 router.use("/wompi", wompiRoutes);

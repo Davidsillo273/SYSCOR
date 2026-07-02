@@ -4,9 +4,9 @@ import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
 
 const router = express.Router();
 
-router.route("/").get(validateAuthCookie(["admin"]), customerController.getCustomers);
+router.route("/").get(customerController.getCustomers);
 router
     .route("/:id")
-    .put(validateAuthCookie(["customer", "admin"]), customerController.updateCustomer)
+    .put( customerController.updateCustomer)
 
 export default router;
