@@ -31,7 +31,8 @@ import logoutRoutes from "../auth/logoutRoutes.js";
 import recoveryPasswordRoutes from "../auth/recoveryPasswordRoutes.js";
 
 //Midleware de autenticación
-import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
+import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js"; 
+import authMeRoutes from "../auth/authMeRoutes.js";
 
 const router = Router();
 
@@ -64,5 +65,7 @@ router.use("/auth/admins/login", loginAdminRoutes);
 router.use("/auth/logout", logoutRoutes);
 //auth - recovery password
 router.use("/auth/recoveryPassword", recoveryPasswordRoutes);
+
+router.use("/auth", authMeRoutes)
 
 export default router;
