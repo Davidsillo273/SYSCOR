@@ -86,15 +86,20 @@ drinksController.insertDrink = async (req, res) => {
 drinksController.deleteDrink = async (req, res) => {
   try {
     const drinkFound = await drinkModel.findById(req.params.id);
+    if (!drinkFound) {
+      return res.status(404).json({ message: "Drink not found" });
+    }
 
-    await cloudinary.uploader.destroy(drinkFound.public_id);
+    // Si tiene imagen asociada, la borramos de Cloudinary
+    if (drinkFound.public_id) {
+      await cloudinary.uploader.destroy(drinkFound.public_id);
+    }
 
     await drinkModel.findByIdAndDelete(req.params.id);
-
-    return res.status(200).json({message: "Drink deleted successfully",});
+    return res.status(200).json({ message: "Drink deleted successfully" });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
