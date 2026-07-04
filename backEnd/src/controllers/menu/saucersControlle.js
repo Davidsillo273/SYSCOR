@@ -81,15 +81,20 @@ saucersController.insertSaucer = async (req, res) => {
 saucersController.deleteSaucer = async (req, res) => {
   try {
     const saucerFound = await saucersModel.findById(req.params.id);
+    if (!saucerFound) {
+      return res.status(404).json({ message: "Saucer not found" });
+    }
 
-    await cloudinary.uploader.destroy(saucerFound.public_id);
+    // Solo intenta borrar la imagen si existe public_id
+    if (saucerFound.public_id) {
+      await cloudinary.uploader.destroy(saucerFound.public_id);
+    }
 
     await saucersModel.findByIdAndDelete(req.params.id);
-
-    return res.status(200).json({message: "Saucer deleted successfully",});
+    return res.status(200).json({ message: "Saucer deleted successfully" });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
