@@ -8,6 +8,7 @@ import Customers from "../../models/users/customerModel.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 import emailUtils from "../../utils/auth/emailUtils.js";
 import cookieConfig from "../../config/cookieConfig.js";
+import recoveryResponse from "../../utils/auth/recoveryPasswordUtils.js";
 
 // Mapea el string `userType` enviado por el cliente a su modelo de
 // Mongoose correspondiente, para que este único controlador pueda manejar
@@ -34,17 +35,19 @@ recoveryPasswordController.requestCode = async (req, res) => {
         const validation = validationUtils.runValidations([
             () => validationUtils.validateEmail(email)
         ]);
-        if (!validation.valid) return res.status(400).json({ message: validation.message });
+        if (!validation.valid) {
+            return res.status(400).json(recoveryResponse.requestCode.invalidEmail(validation.message));
+        }
 
         // Rechaza roles no soportados/desconocidos antes de consultar la DB
         const targetModel = ROLES_MODELS[userType];
         if (!targetModel) {
-            return res.status(400).json({ message: "Invalid user type." });
+            return res.status(400).json(recoveryResponse.requestCode.invalidUserType);
         }
 
         const userFound = await targetModel.findOne({ "loginInfo.email": email.toLowerCase() });
         if (!userFound) {
-            return res.status(404).json({ message: "User not found." });
+            return res.status(404).json(recoveryResponse.requestCode.userNotFound);
         }
 
         const code = emailUtils.generateVerificationCode();
@@ -60,10 +63,10 @@ recoveryPasswordController.requestCode = async (req, res) => {
 
         res.cookie("recoveryCookie", token, { ...cookieConfig, maxAge: 15 * 60 * 1000 });
 
-        return res.status(200).json({ message: "Recovery email sent." });
+        return res.status(200).json(recoveryResponse.requestCode.success);
     } catch (error) {
         console.error("Error in requestCode:", error);
-        return res.status(500).json({ message: "Internal server error." });
+        return res.status(500).json(recoveryResponse.requestCode.serverError);
     }
 };
 
@@ -80,15 +83,19 @@ recoveryPasswordController.verifyCode = async (req, res) => {
         const validation = validationUtils.runValidations([
             () => validationUtils.validateVerificationCode(codeRequest)
         ]);
-        if (!validation.valid) return res.status(400).json({ message: validation.message });
+        if (!validation.valid) {
+            return res.status(400).json(recoveryResponse.verifyCode.invalidCode(validation.message));
+        }
 
         const token = req.cookies.recoveryCookie;
-        if (!token) return res.status(401).json({ message: "Recovery session expired." });
+        if (!token) {
+            return res.status(401).json(recoveryResponse.verifyCode.sessionExpired);
+        }
 
         const decoded = emailUtils.verifyToken(token);
 
         if (codeRequest.toUpperCase() !== decoded.code) {
-            return res.status(400).json({ message: "Invalid or incorrect code." });
+            return res.status(400).json(recoveryResponse.verifyCode.incorrectCode);
         }
 
         // Reemite la cookie conservando email + userType, ahora marcada como verificada
@@ -99,10 +106,10 @@ recoveryPasswordController.verifyCode = async (req, res) => {
 
         res.cookie("recoveryCookie", newToken, { ...cookieConfig, maxAge: 15 * 60 * 1000 });
 
-        return res.status(200).json({ message: "Code verified successfully. Proceed to change your password." });
+        return res.status(200).json(recoveryResponse.verifyCode.success);
     } catch (error) {
         console.error("Error in verifyCode:", error);
-        return res.status(500).json({ message: "Internal server error or expired token." });
+        return res.status(500).json(recoveryResponse.verifyCode.serverError);
     }
 };
 
@@ -121,21 +128,25 @@ recoveryPasswordController.newPassword = async (req, res) => {
         const validation = validationUtils.runValidations([
             () => validationUtils.validatePassword(newPassword)
         ]);
-        if (!validation.valid) return res.status(400).json({ message: validation.message });
+        if (!validation.valid) {
+            return res.status(400).json(recoveryResponse.newPassword.invalidPassword(validation.message));
+        }
 
         if (newPassword !== confirmNewPassword) {
-            return res.status(400).json({ message: "Passwords do not match." });
+            return res.status(400).json(recoveryResponse.newPassword.passwordsMismatch);
         }
 
         const token = req.cookies.recoveryCookie;
-        if (!token) return res.status(401).json({ message: "Recovery session expired." });
+        if (!token) {
+            return res.status(401).json(recoveryResponse.newPassword.sessionExpired);
+        }
 
         const decoded = emailUtils.verifyToken(token);
 
         // Bloquea a cualquiera que intente llamar este endpoint sin haber
         // pasado primero por el paso 2 (es decir, token.verified sigue en false)
         if (!decoded.verified) {
-            return res.status(403).json({ message: "You must verify the code first." });
+            return res.status(403).json(recoveryResponse.newPassword.notVerified);
         }
 
         const passwordHash = await bcrypt.hash(newPassword, 10);
@@ -151,10 +162,10 @@ recoveryPasswordController.newPassword = async (req, res) => {
 
         res.clearCookie("recoveryCookie", cookieConfig);
 
-        return res.status(200).json({ message: "Password updated successfully." });
+        return res.status(200).json(recoveryResponse.newPassword.success);
     } catch (error) {
         console.error("Error in newPassword:", error);
-        return res.status(500).json({ message: "Internal server error." });
+        return res.status(500).json(recoveryResponse.newPassword.serverError);
     }
 };
 

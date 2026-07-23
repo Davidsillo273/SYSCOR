@@ -86,15 +86,20 @@ drinksController.insertDrink = async (req, res) => {
 drinksController.deleteDrink = async (req, res) => {
   try {
     const drinkFound = await drinkModel.findById(req.params.id);
+    if (!drinkFound) {
+      return res.status(404).json({ message: "Drink not found" });
+    }
 
-    await cloudinary.uploader.destroy(drinkFound.public_id);
+    // Si tiene imagen asociada, la borramos de Cloudinary
+    if (drinkFound.public_id) {
+      await cloudinary.uploader.destroy(drinkFound.public_id);
+    }
 
     await drinkModel.findByIdAndDelete(req.params.id);
-
-    return res.status(200).json({message: "Drink deleted successfully",});
+    return res.status(200).json({ message: "Drink deleted successfully" });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -103,51 +108,42 @@ drinksController.updateDrink = async (req, res) => {
   try {
     const { name, price, quantity, status } = req.body;
 
+    // Validaciones
     let validation = validationsDrinks.validateName(name);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
 
     validation = validationsDrinks.validatePrice(price);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
 
     validation = validationsDrinks.validateQuantity(quantity);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
 
     validation = validationsDrinks.validateStatus(status);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+
+    // Verificar que la bebida existe
+    const drinkFound = await drinkModel.findById(req.params.id);
+    if (!drinkFound) {
+      return res.status(404).json({ message: "Drink not found" });
     }
 
-    const drinkFound = await drinkModel.findById(req.params.id);
+    const updatedData = { name, price, quantity, status };
 
-    const updatedData = {
-      name,
-      price,
-      quantity,
-      status,
-    };
-
-    // Si el usuario envió una imagen nueva, borramos la vieja y guardamos la nueva
+    // Si se envió una nueva imagen, borramos la anterior (si existía) y guardamos la nueva
     if (req.file) {
-      await cloudinary.uploader.destroy(drinkFound.public_id);
-
+      if (drinkFound.public_id) {
+        await cloudinary.uploader.destroy(drinkFound.public_id);
+      }
       updatedData.image = req.file.path;
       updatedData.public_id = req.file.filename;
     }
 
-    await drinkModel.findByIdAndUpdate(req.params.id, updatedData, {
-      new: true,
-    });
+    await drinkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
 
-    return res.status(200).json({message: "Drink updated successfully",});
+    return res.status(200).json({ message: "Drink updated successfully" });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

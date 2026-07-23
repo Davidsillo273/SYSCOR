@@ -6,16 +6,29 @@ const processLogin = async (Model, email, password, role) => {
 
     const userFound = await Model.findOne({ "loginInfo.email": email });
 
+    // 1. Usuario no encontrado
     if (!userFound) {
-        return { error: true, status: 404, message: "User not found" };
+        return {
+            error: true,
+            status: 404,
+            title: "Usuario no encontrado",
+            message: "No existe ninguna cuenta asociada a este correo electrónico."
+        };
     }
 
+    // 2. Cuenta bloqueada actualmente por tiempo
     if (userFound.loginInfo.timeOut && userFound.loginInfo.timeOut > Date.now()) {
-        return { error: true, status: 403, message: "Account blocked due to multiple failed attempts" };
+        return {
+            error: true,
+            status: 403,
+            title: "Cuenta bloqueada",
+            message: "Cuenta bloqueada por múltiples intentos fallidos. Por favor, inténtelo de nuevo más tarde."
+        };
     }
 
     const isMatch = await bcrypt.compare(password, userFound.loginInfo.password);
 
+    // 3. Contraseña incorrecta e incremento de intentos
     if (!isMatch) {
         userFound.loginInfo.loginAttempts = (userFound.loginInfo.loginAttempts || 0) + 1;
 
@@ -24,13 +37,24 @@ const processLogin = async (Model, email, password, role) => {
             userFound.loginInfo.loginAttempts = 0;
             await userFound.save();
 
-            return { error: true, status: 403, message: "Too many failed attempts. Account blocked for 15 minutes." };
+            return {
+                error: true,
+                status: 403,
+                title: "Demasiados intentos fallidos",
+                message: "Su cuenta ha sido bloqueada temporalmente por 15 minutos."
+            };
         }
 
         await userFound.save();
-        return { error: true, status: 401, message: "Incorrect email or password" };
+        return {
+            error: true,
+            status: 401,
+            title: "Contraseña incorrecta",
+            message: "Por favor, verifique e inténtelo de nuevo."
+        };
     }
 
+    // 4. Éxito: Reiniciar intentos y timeout
     userFound.loginInfo.loginAttempts = 0;
     userFound.loginInfo.timeOut = null;
     await userFound.save();
@@ -38,18 +62,22 @@ const processLogin = async (Model, email, password, role) => {
     const tokenPayload = {
         id: userFound._id,
         role: role,
-        // Los permisos granulares solo existen en Employee (admin tiene
-        // acceso total implícito vía requirePermission). userFound.permissions
-        // será undefined para Admin/Customer, así que cae al array vacío.
         permissions: userFound.permissions || [],
-        // "Foto" del tokenVersion actual en la DB al momento del login.
-        // Si el admin luego cambia los permisos de este empleado, el
-        // tokenVersion en la DB sube y este JWT queda desactualizado.
         tokenVersion: userFound.tokenVersion || 0
     };
 
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET || config.JWT.secret, { expiresIn: "30d" });
+    const token = jwt.sign(
+        tokenPayload,
+        process.env.JWT_SECRET || config.JWT.secret,
+        { expiresIn: "30d" }
+    );
 
-    return { error: false, status: 200, token, message: "Login successful" };
+    return {
+        error: false,
+        status: 200,
+        token,
+        message: "Inicio de sesión exitoso"
+    };
 };
+
 export default processLogin;

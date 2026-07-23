@@ -140,17 +140,20 @@ combosController.deleteCombo = async (req, res) => {
     const comboFound = await combosModel.findById(req.params.id);
 
     if (!comboFound) {
-      return res.status(404).json({message: "Combo not found"});
+      return res.status(404).json({ message: "Combo not found" });
     }
 
-    await cloudinary.uploader.destroy(comboFound.public_id);
+    // Solo eliminar la imagen si existe un public_id
+    if (comboFound.public_id) {
+      await cloudinary.uploader.destroy(comboFound.public_id);
+    }
 
     await combosModel.findByIdAndDelete(req.params.id);
 
-    return res.status(200).json({message: "Combo deleted successfully"});
+    return res.status(200).json({ message: "Combo deleted successfully" });
   } catch (error) {
     console.log("error " + error);
-    return res.status(500).json({message: "Internal server error"});
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
