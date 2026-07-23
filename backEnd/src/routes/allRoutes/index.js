@@ -65,7 +65,7 @@ router.use("/auth/admins/login", loginAdminRoutes);
 router.use("/auth/logout", logoutRoutes);
 //auth - recovery password
 router.use("/auth/recoveryPassword", recoveryPasswordRoutes);
-
+//auth - authMe
 router.use("/auth", authMeRoutes)
 
 export default router;

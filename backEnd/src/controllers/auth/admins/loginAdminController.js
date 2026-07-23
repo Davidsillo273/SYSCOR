@@ -12,12 +12,16 @@ loginAdminController.loginAdmin = async (req, res) => {
         const { email, password } = req.body;
 
         // Usamos nuestra herramienta processLogin para verificar si las credenciales son correctas
-        // Le pasamos el modelo, el correo, la contraseña y especificamos que es un "admin"
         const result = await processLogin(adminModel, email, password, "admin");
 
         // Si processLogin nos devuelve un error (contraseña incorrecta, usuario no existe, etc)
         if (result.error) {
-            return res.status(result.status).json({ message: result.message });
+            // Enviamos todo el objeto result (incluye error, status, title y message)
+            return res.status(result.status).json({
+                error: result.error,
+                title: result.title,
+                message: result.message
+            });
         }
 
         // Si todo está bien, guardamos el token generado en una cookie en el navegador
@@ -28,7 +32,11 @@ loginAdminController.loginAdmin = async (req, res) => {
     } catch (error) {
         // Capturamos cualquier error inesperado del servidor
         console.error("Error in Admin login:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({
+            error: true,
+            title: "Error del servidor",
+            message: "Ocurrió un error interno. Por favor, intente más tarde."
+        });
     }
 };
 
