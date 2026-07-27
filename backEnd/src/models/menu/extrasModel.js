@@ -7,6 +7,8 @@ const extraSchema = new Schema({
     name: { type: String },
     // Costo adicional
     price: { type: Number },
+    // Categoría libre para agrupar extras (Verduras, Lácteos, Salsas, Especial...)
+    category: { type: String },
     // Si está disponible o no
     status: { type: String }
 },{

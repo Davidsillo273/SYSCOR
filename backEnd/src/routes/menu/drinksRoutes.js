@@ -12,6 +12,9 @@ router
 
 router.get("/active", validateAuthCookie(["customer", "admin"]), drinksController.getActiveDrinks);
 
+// Ranking de bebidas más vendidas
+router.get("/best-sellers", drinksController.getBestSellers);
+
 router
   .route("/:id")
   .put(upload.single("image"), drinksController.updateDrink)

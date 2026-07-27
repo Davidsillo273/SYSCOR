@@ -19,15 +19,28 @@ const inventorySchema = new Schema({
     quantity:{
         type: Number
     },
-    // Tipo o categoría de artículo (ej. bebida, ingrediente)
+    // Categoría fija del insumo, usada también para filtrar ingredientes al
+    // armar recetas de bebidas/platillos
     type: {
-        type: String
+        type: String,
+        enum: ["Aves", "Carnes", "Verduras", "Frutas", "Minerales", "Otros"]
     },
     // Estado del artículo (ej. activo, inactivo)
     status: {
         type: String
+    },
+    // Unidad en la que se mide (para insumos usados en recetas de bebidas)
+    unit: {
+        type: String,
+        enum: ["unidad", "g", "kg", "ml", "l", "cucharadita", "cucharada", "taza", "vaso", "pizca"]
+    },
+    // true cuando el insumo se creó al vuelo desde el builder de receta de una
+    // bebida (solo con nombre + unidad) y todavía le falta precio/ubicación/tipo reales
+    pending: {
+        type: Boolean,
+        default: false
     }
-}, 
+},
 {
     // Habilita la creación automática de las fechas de cuándo se creó y cuándo se actualizó por última vez
     timestamps: true,

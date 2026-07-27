@@ -13,6 +13,9 @@ router.route("/")
 // Obtener solo los combos activos
 router.get("/active", validateAuthCookie(["customer", "admin"]), combosController.getActiveCombos);
 
+// Ranking de combos más vendidos
+router.get("/best-sellers", combosController.getBestSellers);
+
 // Obtener un combo por ID, actualizarlo y eliminarlo
 router.route("/:id")
     .put(upload.single("image"), combosController.updateCombo)

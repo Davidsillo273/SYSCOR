@@ -11,7 +11,10 @@ router
   .post(upload.single("image"), saucersController.insertSaucer);
 
   router.get("/active", validateAuthCookie(["customer", "admin"]), saucersController.getActiveSaucers);
-  
+
+  // Ranking de platillos más vendidos
+  router.get("/best-sellers", saucersController.getBestSellers);
+
 router
   .route("/:id")
   .put(upload.single("image"), saucersController.updateSaucer)

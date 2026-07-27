@@ -7,9 +7,15 @@ import { Schema, model } from "mongoose";
 const settingsSchema = new Schema({
     // Ajustes del día a día de la operación
     operation: {
-        // A partir de cuántas unidades se considera que un insumo está por acabarse.
-        // El dashboard y las alertas automáticas de stock usan este valor.
-        lowStockThreshold: { type: Number, default: 10 },
+        // A partir de cuántas unidades se considera "agotado"/bajo stock,
+        // configurable por separado para cada sección del sistema.
+        lowStockThresholds: {
+            inventory: { type: Number, default: 10 },
+            drinks: { type: Number, default: 10 },
+            saucers: { type: Number, default: 10 },
+            extras: { type: Number, default: 10 },
+            combos: { type: Number, default: 10 }
+        },
         // Si el panel debe recargar sus datos solo, sin que el usuario refresque
         autoRefreshDashboard: { type: Boolean, default: true },
         // Cada cuántos segundos se recarga el panel cuando lo anterior está activo

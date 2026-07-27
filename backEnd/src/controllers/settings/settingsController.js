@@ -25,14 +25,20 @@ settingsController.updateSettings = async (req, res) => {
     const settings = await settingsUtils.getOrCreateSettings();
 
     if (operation) {
-      const { lowStockThreshold, autoRefreshDashboard, dashboardRefreshSeconds } = operation;
+      const { lowStockThresholds, autoRefreshDashboard, dashboardRefreshSeconds } = operation;
 
-      if (lowStockThreshold !== undefined) {
-        const threshold = Number(lowStockThreshold);
-        if (isNaN(threshold) || threshold < 0) {
-          return res.status(400).json({ message: "Low stock threshold must be a positive number." });
+      if (lowStockThresholds) {
+        // Cada sección tiene su propio umbral; solo se tocan las que vengan en el body
+        const sections = ["inventory", "drinks", "saucers", "extras", "combos"];
+        for (const section of sections) {
+          if (lowStockThresholds[section] !== undefined) {
+            const threshold = Number(lowStockThresholds[section]);
+            if (isNaN(threshold) || threshold < 0) {
+              return res.status(400).json({ message: `Low stock threshold for ${section} must be a positive number.` });
+            }
+            settings.operation.lowStockThresholds[section] = threshold;
+          }
         }
-        settings.operation.lowStockThreshold = threshold;
       }
 
       if (autoRefreshDashboard !== undefined) {
