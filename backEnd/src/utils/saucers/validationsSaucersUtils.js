@@ -16,11 +16,13 @@ const validateName = (name) => {
   return { valid: true };
 };
 
+const SAUCER_CATEGORIES = ["Burritos", "Tortas", "Tacos", "Sopas", "Especiales"];
+
 const validateCategory = (category) => {
-  if (!category || typeof category !== "string") {
+  if (!category || !SAUCER_CATEGORIES.includes(category)) {
     return {
       valid: false,
-      message: "La categoría es requerida.",
+      message: "La categoría debe ser una de: " + SAUCER_CATEGORIES.join(", "),
     };
   }
 
@@ -58,16 +60,8 @@ const validateStatus = (status) => {
   return { valid: true };
 };
 
-const validateImage = (file) => {
-  if (!file) {
-    return {
-      valid: false,
-      message: "La imagen es requerida.",
-    };
-  }
-
-  return { valid: true };
-};
+// La imagen es opcional: si no se manda, el frontend usa un placeholder
+const validateImage = () => ({ valid: true });
 
 export default {
   validateName,

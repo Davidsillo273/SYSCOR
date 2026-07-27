@@ -4,9 +4,53 @@ import { v2 as cloudinary } from "cloudinary";
 import validationsSaucers from "../../utils/saucers/validationsSaucersUtils.js";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
+import combosModel from "../../models/menu/combosModel.js";
+import cartModel from "../../models/orders/cartModel.js";
 
 // Objeto para agrupar todas las funciones de los platillos
 const saucersController = {};
+
+// La receta llega como FormData, así que viaja como string JSON
+const parseRecipe = (rawRecipe) => {
+  if (!rawRecipe) return [];
+  if (Array.isArray(rawRecipe)) return rawRecipe;
+  try {
+    const parsed = JSON.parse(rawRecipe);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+// Si un platillo deja de estar activo, ningún combo que lo incluya puede
+// seguir vendiéndose: se deshabilitan automáticamente. No se reactivan solos
+// al reactivar el platillo, el admin debe revisarlos.
+const cascadeDisableCombos = async (req, saucerId, saucerName) => {
+  try {
+    const affectedCombos = await combosModel.find({ "saucers.saucerId": saucerId, status: "disponible" });
+    if (affectedCombos.length === 0) return;
+
+    await combosModel.updateMany(
+      { "saucers.saucerId": saucerId, status: "disponible" },
+      { status: "no disponible" }
+    );
+
+    for (const combo of affectedCombos) {
+      await notificationUtils.createNotification({
+        req,
+        category: "menu",
+        action: "status_changed",
+        title: "Combo deshabilitado automáticamente",
+        message: `El combo ${combo.name} se deshabilitó porque el platillo ${saucerName} ya no está activo`,
+        icon: "shopping-bag",
+        severity: "warning",
+        entity: { model: "Combos", id: combo._id, label: combo.name },
+      });
+    }
+  } catch (error) {
+    console.error("saucersController.cascadeDisableCombos:", error);
+  }
+};
 
 // Obtiene todos los platillos sin importar su estado
 saucersController.getAllSaucers = async (req, res) => {
@@ -22,7 +66,7 @@ saucersController.getAllSaucers = async (req, res) => {
 // Obtiene solo los platillos que están activos (disponibles para venta)
 saucersController.getActiveSaucers = async (req, res) => {
   try {
-    const saucers = await saucersModel.find({ status: "activo" });
+    const saucers = await saucersModel.find({ status: "Activo" });
 
     return res.status(200).json(saucers);
   } catch (error) {
@@ -31,10 +75,58 @@ saucersController.getActiveSaucers = async (req, res) => {
   }
 };
 
-// Crea un nuevo platillo en el menú, incluyendo su imagen
+// Ranking de platillos más vendidos. Los platillos no están referenciados
+// directo en el carrito (solo a través de los combos que los incluyen), así
+// que hace falta un doble $lookup: carrito -> combo -> platillo.
+saucersController.getBestSellers = async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 5;
+
+    const ranking = await cartModel.aggregate([
+      { $unwind: "$details" },
+      { $unwind: "$details.combos" },
+      {
+        $lookup: {
+          from: "combos",
+          localField: "details.combos.comboId",
+          foreignField: "_id",
+          as: "combo",
+        },
+      },
+      { $unwind: "$combo" },
+      { $unwind: "$combo.saucers" },
+      {
+        $group: {
+          _id: "$combo.saucers.saucerId",
+          totalSold: { $sum: "$details.combos.quantity" },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "saucers",
+          localField: "_id",
+          foreignField: "_id",
+          as: "saucer",
+        },
+      },
+      { $unwind: "$saucer" },
+      { $project: { _id: 0, saucer: 1, totalSold: 1 } },
+    ]);
+
+    return res.status(200).json(ranking);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Crea un nuevo platillo en el menú (imagen y receta opcionales)
 saucersController.insertSaucer = async (req, res) => {
   try {
-    const { name, category, price, status } = req.body;
+    const { name, category, price, status, isBirria } = req.body;
+    const recipe = parseRecipe(req.body.recipe);
 
     let validation = validationsSaucers.validateName(name);
     if (!validation.valid) {
@@ -51,23 +143,23 @@ saucersController.insertSaucer = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsSaucers.validateStatus(status);
+    // Nace 'Activo' por default: el admin no crea algo pensado para estar deshabilitado
+    const finalStatus = status || "Activo";
+    validation = validationsSaucers.validateStatus(finalStatus);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsSaucers.validateImage(req.file);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
+    const birriaApplies = ["Burritos", "Tortas", "Tacos"].includes(category);
 
     const newSaucer = new saucersModel({
       name,
       category,
+      isBirria: birriaApplies ? Boolean(isBirria === "true" || isBirria === true) : false,
       price,
-      status,
-      image: req.file.path,
-      public_id: req.file.filename,
+      status: finalStatus,
+      recipe,
+      ...(req.file ? { image: req.file.path, public_id: req.file.filename } : {}),
     });
 
     await newSaucer.save();
@@ -124,10 +216,11 @@ saucersController.deleteSaucer = async (req, res) => {
   }
 };
 
-// Actualiza un platillo (nombre, categoría, precio, estado y/o imagen)
+// Actualiza un platillo (nombre, categoría, precio, estado, receta y/o imagen)
 saucersController.updateSaucer = async (req, res) => {
   try {
-    const { name, category, price, status } = req.body;
+    const { name, category, price, status, isBirria } = req.body;
+    const recipe = parseRecipe(req.body.recipe);
 
     let validation = validationsSaucers.validateName(name);
     if (!validation.valid) {
@@ -151,16 +244,22 @@ saucersController.updateSaucer = async (req, res) => {
 
     const saucerFound = await saucersModel.findById(req.params.id);
 
+    const birriaApplies = ["Burritos", "Tortas", "Tacos"].includes(category);
+
     const updatedData = {
       name,
       category,
+      isBirria: birriaApplies ? Boolean(isBirria === "true" || isBirria === true) : false,
       price,
       status,
+      recipe,
     };
 
     // Si hay una nueva imagen, borramos la antigua y registramos la nueva
     if (req.file) {
-      await cloudinary.uploader.destroy(saucerFound.public_id);
+      if (saucerFound?.public_id) {
+        await cloudinary.uploader.destroy(saucerFound.public_id);
+      }
 
       updatedData.image = req.file.path;
       updatedData.public_id = req.file.filename;
@@ -186,6 +285,10 @@ saucersController.updateSaucer = async (req, res) => {
       severity: "info",
       entity: { model: "Saucers", id: req.params.id, label: name },
     });
+
+    if (status !== "Activo") {
+      await cascadeDisableCombos(req, req.params.id, name);
+    }
 
     return res.status(200).json({message: "Saucer updated successfully",});
   } catch (error) {

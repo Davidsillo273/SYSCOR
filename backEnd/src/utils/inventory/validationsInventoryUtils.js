@@ -49,11 +49,13 @@ const validateQuantity = (quantity) => {
   return { valid: true };
 };
 
+const INVENTORY_CATEGORIES = ["Aves", "Carnes", "Verduras", "Frutas", "Minerales", "Otros"];
+
 const validateType = (type) => {
-  if (!type || typeof type !== "string") {
+  if (!type || !INVENTORY_CATEGORIES.includes(type)) {
     return {
       valid: false,
-      message: "El tipo es requerido.",
+      message: "El tipo debe ser uno de: " + INVENTORY_CATEGORIES.join(", "),
     };
   }
 

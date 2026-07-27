@@ -27,11 +27,14 @@ const validatePrice = (price) => {
   return { valid: true };
 };
 
-const validateQuantity = (quantity) => {
+// La cantidad solo es obligatoria para bebidas 'tercero' (las de casa no llevan stock propio)
+const validateQuantity = (quantity, category) => {
+  if (category !== "tercero") return { valid: true };
+
   if (quantity === undefined || quantity === null || quantity === "") {
     return {
       valid: false,
-      message: "La cantidad es requerida.",
+      message: "La cantidad es requerida para bebidas de tercero.",
     };
   }
 
@@ -49,21 +52,25 @@ const validateStatus = (status) => {
   return { valid: true };
 };
 
-const validateImage = (file) => {
-  if (!file) {
+const validateCategory = (category) => {
+  if (!category || !["casa", "tercero"].includes(category)) {
     return {
       valid: false,
-      message: "La imagen es requerida.",
+      message: "La categoría debe ser 'casa' o 'tercero'.",
     };
   }
 
   return { valid: true };
 };
 
+// La imagen es opcional: si no se manda, el frontend usa un placeholder
+const validateImage = () => ({ valid: true });
+
 export default {
   validateName,
   validatePrice,
   validateQuantity,
   validateStatus,
+  validateCategory,
   validateImage,
 };

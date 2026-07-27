@@ -12,7 +12,7 @@ const inventoryController = {};
 const notifyIfLowStock = async (req, product) => {
   try {
     const settings = await settingsUtils.getOrCreateSettings();
-    const threshold = settings.operation?.lowStockThreshold ?? 10;
+    const threshold = settings.operation?.lowStockThresholds?.inventory ?? 10;
 
     if (Number(product.quantity) > threshold) return;
 
@@ -31,10 +31,14 @@ const notifyIfLowStock = async (req, product) => {
   }
 };
 
-// Obtiene todos los productos registrados en el inventario
+// Obtiene todos los productos registrados en el inventario.
+// ?pending=true filtra solo los insumos creados al vuelo que faltan por completar
 inventoryController.getAllInventory = async (req, res) => {
   try {
-    const inventory = await inventoryModel.find();
+    const filter = {};
+    if (req.query.pending === "true") filter.pending = true;
+
+    const inventory = await inventoryModel.find(filter);
 
     return res.status(200).json(inventory);
   } catch (error) {
@@ -42,6 +46,44 @@ inventoryController.getAllInventory = async (req, res) => {
     return res.status(500).json({
       message: "Internal server error",
     });
+  }
+};
+
+// Crea un insumo mínimo (nombre + unidad) desde el builder de receta de una
+// bebida. Queda marcado como "pendiente" hasta que el admin lo complete desde Inventario.
+inventoryController.insertQuickInventory = async (req, res) => {
+  try {
+    const { name, unit, type } = req.body;
+
+    const validation = validationsInventory.validateName(name);
+    if (!validation.valid) {
+      return res.status(400).json({ message: validation.message });
+    }
+
+    if (!unit) {
+      return res.status(400).json({ message: "La unidad es requerida." });
+    }
+
+    const newInventory = new inventoryModel({
+      name,
+      unit,
+      price: 0,
+      ubication: "",
+      quantity: 0,
+      type: type || "Otros",
+      status: "disponible",
+      pending: true,
+    });
+
+    await newInventory.save();
+
+    return res.status(201).json({
+      message: "Insumo pendiente creado",
+      newInventory,
+    });
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -229,7 +271,8 @@ inventoryController.updateInventory = async (req, res) => {
       return res.status(404).json({message: "Product not found",});
     }
 
-    // Agrupamos los datos nuevos
+    // Agrupamos los datos nuevos. Pasar por aquí implica que el formulario
+    // completo fue validado, así que cualquier insumo "pendiente" queda completo.
     const updatedData = {
       name,
       price,
@@ -237,6 +280,7 @@ inventoryController.updateInventory = async (req, res) => {
       quantity,
       type,
       status,
+      pending: false,
     };
 
     const updatedInventory = await inventoryModel.findByIdAndUpdate(

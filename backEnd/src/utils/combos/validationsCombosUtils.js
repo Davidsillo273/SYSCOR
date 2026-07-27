@@ -16,22 +16,23 @@ const validateName = (name) => {
   return { valid: true };
 };
 
-const validateSaucersId = (saucersId) => {
-  if (!saucersId) {
+// Ahora un combo puede tener uno o varios platillos
+const validateSaucers = (saucers) => {
+  if (!Array.isArray(saucers) || saucers.length === 0) {
     return {
       valid: false,
-      message: "El platillo es requerido.",
+      message: "El combo debe incluir al menos un platillo.",
     };
   }
 
   return { valid: true };
 };
 
-const validateDrinksId = (drinksId) => {
-  if (!drinksId) {
+const validateCategory = (category) => {
+  if (!category || !["individual", "duo", "familiar"].includes(category)) {
     return {
       valid: false,
-      message: "La bebida es requerida.",
+      message: "La categoría debe ser 'individual', 'duo' o 'familiar'.",
     };
   }
 
@@ -82,21 +83,13 @@ const validateStatus = (status) => {
   return { valid: true };
 };
 
-const validateImage = (file) => {
-  if (!file) {
-    return {
-      valid: false,
-      message: "La imagen es requerida.",
-    };
-  }
-
-  return { valid: true };
-};
+// La imagen es opcional: si no se manda, el frontend usa un placeholder
+const validateImage = () => ({ valid: true });
 
 export default {
   validateName,
-  validateSaucersId,
-  validateDrinksId,
+  validateSaucers,
+  validateCategory,
   validatePrice,
   validateQuantity,
   validateDescription,

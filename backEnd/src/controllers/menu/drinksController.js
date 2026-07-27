@@ -4,9 +4,48 @@ import { v2 as cloudinary } from "cloudinary";
 import validationsDrinks from "../../utils/drinks/validationsDrinksUtils.js";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
+import settingsUtils from "../../utils/settings/settingsUtils.js";
+import cartModel from "../../models/orders/cartModel.js";
 
 // Creamos un objeto para agrupar todas las funciones de bebidas
 const drinksController = {};
+
+// La receta llega como FormData, así que el arreglo viaja como string JSON
+const parseRecipe = (rawRecipe) => {
+  if (!rawRecipe) return [];
+  if (Array.isArray(rawRecipe)) return rawRecipe;
+  try {
+    const parsed = JSON.parse(rawRecipe);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+// Solo las bebidas 'tercero' llevan stock propio; revisa el umbral configurado en Ajustes
+const notifyIfLowStock = async (req, drink) => {
+  try {
+    if (drink.category !== "tercero") return;
+
+    const settings = await settingsUtils.getOrCreateSettings();
+    const threshold = settings.operation?.lowStockThresholds?.drinks ?? 10;
+
+    if (Number(drink.quantity) > threshold) return;
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "low_stock",
+      title: "Alerta de stock",
+      message: `Stock bajo: la bebida ${drink.name} quedó en ${drink.quantity} unidades (mínimo ${threshold})`,
+      icon: "triangle-exclamation",
+      severity: "warning",
+      entity: { model: "Drinks", id: drink._id, label: drink.name },
+    });
+  } catch (error) {
+    console.error("drinksController.notifyIfLowStock:", error);
+  }
+};
 
 // Obtiene todas las bebidas guardadas en el menú
 drinksController.getAllDrinks = async (req, res) => {
@@ -32,10 +71,49 @@ drinksController.getActiveDrinks = async (req, res) => {
 };
 
 
-// Crea una nueva bebida en la base de datos (con imagen)
+// Ranking de bebidas más vendidas. Hoy las bebidas solo aparecen en el carrito
+// anidadas dentro de un extra (details.extras[].drinks[]), así que el conteo
+// se limita a ese caso; no hay todavía selección de bebida dentro de un combo.
+drinksController.getBestSellers = async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 5;
+
+    const ranking = await cartModel.aggregate([
+      { $unwind: "$details" },
+      { $unwind: "$details.extras" },
+      { $unwind: "$details.extras.drinks" },
+      {
+        $group: {
+          _id: "$details.extras.drinks.drinkId",
+          totalSold: { $sum: 1 },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "drinks",
+          localField: "_id",
+          foreignField: "_id",
+          as: "drink",
+        },
+      },
+      { $unwind: "$drink" },
+      { $project: { _id: 0, drink: 1, totalSold: 1 } },
+    ]);
+
+    return res.status(200).json(ranking);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Crea una nueva bebida en la base de datos (imagen y receta opcionales)
 drinksController.insertDrink = async (req, res) => {
   try {
-    const { name, price, quantity, status } = req.body;
+    const { name, price, quantity, status, category, subcategory } = req.body;
+    const recipe = parseRecipe(req.body.recipe);
 
     let validation = validationsDrinks.validateName(name);
     if (!validation.valid) {
@@ -47,29 +125,33 @@ drinksController.insertDrink = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsDrinks.validateQuantity(quantity);
+    validation = validationsDrinks.validateCategory(category);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsDrinks.validateStatus(status);
+    validation = validationsDrinks.validateQuantity(quantity, category);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsDrinks.validateImage(req.file);
+    // Nace disponible por default: el admin no crea algo pensado para estar deshabilitado
+    const finalStatus = status || "disponible";
+    validation = validationsDrinks.validateStatus(finalStatus);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
-    // Crear nuevo registro
+    // Crear nuevo registro. La receta solo aplica a bebidas 'casa'; la imagen es opcional
     const newDrink = new drinkModel({
       name,
       price,
-      quantity,
-      status,
-      image: req.file.path,
-      public_id: req.file.filename,
+      category,
+      subcategory,
+      quantity: category === "tercero" ? quantity : undefined,
+      status: finalStatus,
+      recipe: category === "casa" ? recipe : [],
+      ...(req.file ? { image: req.file.path, public_id: req.file.filename } : {}),
     });
 
     // Guardar en la base de datos
@@ -86,6 +168,8 @@ drinksController.insertDrink = async (req, res) => {
       severity: "success",
       entity: { model: "Drinks", id: newDrink._id, label: newDrink.name },
     });
+
+    await notifyIfLowStock(req, newDrink);
 
     return res.status(200).json({
       message: "Drink saved successfully",
@@ -132,7 +216,8 @@ drinksController.deleteDrink = async (req, res) => {
 // Actualiza los datos de una bebida (precio, nombre, o si sube una imagen nueva)
 drinksController.updateDrink = async (req, res) => {
   try {
-    const { name, price, quantity, status } = req.body;
+    const { name, price, quantity, status, category, subcategory } = req.body;
+    const recipe = parseRecipe(req.body.recipe);
 
     // Validaciones
     let validation = validationsDrinks.validateName(name);
@@ -141,7 +226,10 @@ drinksController.updateDrink = async (req, res) => {
     validation = validationsDrinks.validatePrice(price);
     if (!validation.valid) return res.status(400).json({ message: validation.message });
 
-    validation = validationsDrinks.validateQuantity(quantity);
+    validation = validationsDrinks.validateCategory(category);
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+
+    validation = validationsDrinks.validateQuantity(quantity, category);
     if (!validation.valid) return res.status(400).json({ message: validation.message });
 
     validation = validationsDrinks.validateStatus(status);
@@ -153,7 +241,15 @@ drinksController.updateDrink = async (req, res) => {
       return res.status(404).json({ message: "Drink not found" });
     }
 
-    const updatedData = { name, price, quantity, status };
+    const updatedData = {
+      name,
+      price,
+      category,
+      subcategory,
+      status,
+      quantity: category === "tercero" ? quantity : undefined,
+      recipe: category === "casa" ? recipe : [],
+    };
 
     // Si se envió una nueva imagen, borramos la anterior (si existía) y guardamos la nueva
     if (req.file) {
@@ -164,7 +260,7 @@ drinksController.updateDrink = async (req, res) => {
       updatedData.public_id = req.file.filename;
     }
 
-    await drinkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
+    const updatedDrink = await drinkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
 
     // El cambio de precio es el que más interesa reportar
     const priceChanged = Number(drinkFound.price) !== Number(price);
@@ -182,6 +278,8 @@ drinksController.updateDrink = async (req, res) => {
       severity: "info",
       entity: { model: "Drinks", id: drinkFound._id, label: name },
     });
+
+    await notifyIfLowStock(req, updatedDrink);
 
     return res.status(200).json({ message: "Drink updated successfully" });
   } catch (error) {

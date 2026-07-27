@@ -11,6 +11,9 @@ router
 
 router.get("/active", validateAuthCookie(["customer", "admin"]), extrasController.getActiveExtras);
 
+// Ranking de extras más pedidos
+router.get("/best-sellers", extrasController.getBestSellers);
+
 router
   .route("/:id")
   .put(extrasController.updateExtra)

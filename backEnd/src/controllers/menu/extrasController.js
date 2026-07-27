@@ -5,6 +5,7 @@ import extrasModel from "../../models/menu/extrasModel.js";
 import validationsExtras from "../../utils/extras/validationsExtrasUtils.js";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
+import cartModel from "../../models/orders/cartModel.js";
 
 // Obtiene todos los complementos (extras) del menú, sin importar su estado
 extrasController.getExtras = async (req, res) => {
@@ -20,8 +21,44 @@ extrasController.getExtras = async (req, res) => {
 // Obtiene solo los complementos que están activos (disponibles para venta)
 extrasController.getActiveExtras = async (req, res) => {
   try {
-    const extras = await extrasModel.find({ status: "activo" });
+    const extras = await extrasModel.find({ status: "DISPONIBLE" });
     return res.status(200).json(extras);
+  } catch (error) {
+    console.log("error " + error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Ranking de extras más pedidos, contando cuántas unidades se han pedido
+// en todos los carritos registrados
+extrasController.getBestSellers = async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 5;
+
+    const ranking = await cartModel.aggregate([
+      { $unwind: "$details" },
+      { $unwind: "$details.extras" },
+      {
+        $group: {
+          _id: "$details.extras.extraId",
+          totalSold: { $sum: "$details.extras.quantity" },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "extras",
+          localField: "_id",
+          foreignField: "_id",
+          as: "extra",
+        },
+      },
+      { $unwind: "$extra" },
+      { $project: { _id: 0, extra: 1, totalSold: 1 } },
+    ]);
+
+    return res.status(200).json(ranking);
   } catch (error) {
     console.log("error " + error);
     return res.status(500).json({ message: "Internal server error" });
@@ -31,7 +68,7 @@ extrasController.getActiveExtras = async (req, res) => {
 // Crea un nuevo complemento en el menú
 extrasController.insertExtras = async (req, res) => {
   try {
-    let { name, price, status } = req.body;
+    let { name, price, status, category } = req.body;
 
     // Validamos que el nombre, precio y estado tengan el formato correcto
     let validation = validationsExtras.validateName(name);
@@ -47,6 +84,7 @@ extrasController.insertExtras = async (req, res) => {
     const newExtra = new extrasModel({
       name,
       price,
+      category,
       status,
     });
 
@@ -103,7 +141,7 @@ extrasController.deleteExtra = async (req, res) => {
 // Actualiza un complemento existente (por ejemplo, cambiarle el precio)
 extrasController.updateExtra = async (req, res) => {
   try {
-    let { name, price, status } = req.body;
+    let { name, price, status, category } = req.body;
 
     // Validamos los datos nuevos
     let validation = validationsExtras.validateName(name);
@@ -118,7 +156,7 @@ extrasController.updateExtra = async (req, res) => {
     // Buscamos y actualizamos el complemento
     const extraUpdated = await extrasModel.findByIdAndUpdate(
       req.params.id,
-      { name, price, status },
+      { name, price, category, status },
       { new: true } // Para que nos devuelva el objeto ya actualizado
     );
 

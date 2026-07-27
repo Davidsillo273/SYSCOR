@@ -8,6 +8,9 @@ router.route("/")
     .get(inventoryController.getAllInventory)
     .post(inventoryController.insertInventory);
 
+// Creación mínima (nombre + unidad) desde el builder de receta de bebidas
+router.post("/quick", inventoryController.insertQuickInventory);
+
 // Obtener un producto por ID, actualizarlo y eliminarlo
 router.route("/:id")
     .get(inventoryController.getInventoryById)
