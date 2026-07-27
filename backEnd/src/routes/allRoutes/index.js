@@ -11,6 +11,8 @@ import employeeRoutes from "../users/employeeRoutes.js";
 import adminRoutes from "../users/adminRoutes.js";
 import wompiRoutes from "../orders/wompiRoutes.js"
 import tablesRoutes from "../tables/tablesRoutes.js"
+import notificationsRoutes from "../notifications/notificationsRoutes.js";
+import settingsRoutes from "../settings/settingsRoutes.js";
 
 
 // Aquí importamos todas las rutas de cada módulo
@@ -29,6 +31,8 @@ import loginAdminRoutes from "../auth/admins/loginAdminRoutes.js";
 import logoutRoutes from "../auth/logoutRoutes.js";
 //auth - recovery password
 import recoveryPasswordRoutes from "../auth/recoveryPasswordRoutes.js";
+//auth - change password (con sesión activa)
+import changePasswordRoutes from "../auth/changePasswordRoutes.js";
 
 //Midleware de autenticación
 import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js"; 
@@ -47,6 +51,8 @@ router.use("/customers", customerRoutes);
 router.use("/employees",employeeRoutes);
 router.use("/admins", adminRoutes);
 router.use("/tables", tablesRoutes);
+router.use("/notifications", notificationsRoutes);
+router.use("/settings", settingsRoutes);
 
 //Wompi
 router.use("/wompi", wompiRoutes);
@@ -65,6 +71,8 @@ router.use("/auth/admins/login", loginAdminRoutes);
 router.use("/auth/logout", logoutRoutes);
 //auth - recovery password
 router.use("/auth/recoveryPassword", recoveryPasswordRoutes);
+//auth - change password (con sesión activa)
+router.use("/auth", changePasswordRoutes);
 //auth - authMe
 router.use("/auth", authMeRoutes)
 

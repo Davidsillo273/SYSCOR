@@ -2,6 +2,7 @@
 import adminModel from "../../models/users/adminModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
+import cloudinaryUtils from "../../utils/cloudinaryUtils.js";
 
 const adminController = {};
 
@@ -44,6 +45,14 @@ adminController.updateAdmin = async (req, res) => {
             if (!result.valid) return res.status(400).json({ message: result.message });
         }
 
+        // Si viene una foto nueva, guardamos la URL de la anterior para
+        // borrarla de Cloudinary después de que la actualización tenga éxito
+        let previousImage = null;
+        if (req.file) {
+            const currentAdmin = await adminModel.findById(req.params.id).select("personalInfo.image");
+            previousImage = currentAdmin?.personalInfo?.image || null;
+        }
+
         const updatedAdmin = await adminModel.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
@@ -51,6 +60,11 @@ adminController.updateAdmin = async (req, res) => {
         ).select("-loginInfo.password");
 
         if (!updatedAdmin) return res.status(404).json({ message: "Admin not found" });
+
+        // La imagen anterior ya no la usa nadie, la eliminamos de Cloudinary
+        if (previousImage) {
+            await cloudinaryUtils.deletePreviousImage(previousImage);
+        }
 
         return res.status(200).json({ message: "Admin updated successfully", data: updatedAdmin });
     } catch (error) {

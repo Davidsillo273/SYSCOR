@@ -2,6 +2,8 @@
 import drinkModel from "../../models/menu/drinksModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsDrinks from "../../utils/drinks/validationsDrinksUtils.js";
+// Utilidad para registrar los movimientos del menú como notificaciones
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 // Creamos un objeto para agrupar todas las funciones de bebidas
 const drinksController = {};
@@ -73,6 +75,18 @@ drinksController.insertDrink = async (req, res) => {
     // Guardar en la base de datos
     await newDrink.save();
 
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "created",
+      title: "Bebida agregada",
+      message: (actor) =>
+        `${actor.name} agregó la bebida ${newDrink.name} al menú ($${Number(newDrink.price).toFixed(2)})`,
+      icon: "wine-glass",
+      severity: "success",
+      entity: { model: "Drinks", id: newDrink._id, label: newDrink.name },
+    });
+
     return res.status(200).json({
       message: "Drink saved successfully",
     });
@@ -96,6 +110,18 @@ drinksController.deleteDrink = async (req, res) => {
     }
 
     await drinkModel.findByIdAndDelete(req.params.id);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "deleted",
+      title: "Bebida eliminada",
+      message: (actor) => `${actor.name} eliminó la bebida ${drinkFound.name} del menú`,
+      icon: "trash",
+      severity: "danger",
+      entity: { model: "Drinks", id: drinkFound._id, label: drinkFound.name },
+    });
+
     return res.status(200).json({ message: "Drink deleted successfully" });
   } catch (error) {
     console.log("error " + error);
@@ -139,6 +165,23 @@ drinksController.updateDrink = async (req, res) => {
     }
 
     await drinkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
+
+    // El cambio de precio es el que más interesa reportar
+    const priceChanged = Number(drinkFound.price) !== Number(price);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "updated",
+      title: "Bebida actualizada",
+      message: (actor) =>
+        priceChanged
+          ? `${actor.name} cambió el precio de ${name}: de $${Number(drinkFound.price).toFixed(2)} a $${Number(price).toFixed(2)}`
+          : `${actor.name} actualizó la bebida ${name}`,
+      icon: "wine-glass",
+      severity: "info",
+      entity: { model: "Drinks", id: drinkFound._id, label: name },
+    });
 
     return res.status(200).json({ message: "Drink updated successfully" });
   } catch (error) {

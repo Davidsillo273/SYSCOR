@@ -2,6 +2,29 @@ import jsonwebtoken from "jsonwebtoken";
 import { config } from "../../../config.js";
 import employeeModel from "../../models/users/employeeModel.js";
 
+// Este middleware NO bloquea a nadie: solo intenta averiguar quién está haciendo la petición.
+// Si viene una cookie válida, deja los datos del usuario en req.user; si no viene o está dañada,
+// simplemente deja pasar la petición sin req.user.
+//
+// Sirve para las rutas públicas (mesas, inventario, carritos, menú), donde queremos poder
+// registrar en las notificaciones QUIÉN hizo el movimiento, pero sin exigir sesión para operar.
+export const attachUser = (req, res, next) => {
+    try {
+        const { authCookie } = req.cookies;
+
+        // Sin cookie no hay nada que averiguar, seguimos de largo
+        if (!authCookie) return next();
+
+        req.user = jsonwebtoken.verify(authCookie, config.JWT.secret);
+    } catch (error) {
+        // Un token vencido o inválido aquí no es un error: solo significa que
+        // no sabemos quién es. La petición continúa como anónima.
+        req.user = undefined;
+    }
+
+    return next();
+};
+
 // Este middleware actúa como un guardia de seguridad. Verifica si el usuario tiene permiso para acceder a cierta ruta.
 // 'allowedTypes' es una lista de los roles que tienen permitido pasar (por ejemplo: admin, empleado, cliente).
 export const validateAuthCookie = (allowedTypes = []) => {

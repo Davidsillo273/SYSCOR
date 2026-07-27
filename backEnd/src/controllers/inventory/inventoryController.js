@@ -1,8 +1,35 @@
 // Importamos el modelo de inventario y la utilidad que valida los datos
 import inventoryModel from "../../models//inventory/inventoryModel.js";
 import validationsInventory from "../../utils/inventory/validationsInventoryUtils.js";
+// Utilidades para registrar movimientos y para leer el umbral de stock bajo configurado
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
+import settingsUtils from "../../utils/settings/settingsUtils.js";
 
 const inventoryController = {};
+
+// Revisa si un insumo quedó por debajo del mínimo configurado en Ajustes y,
+// de ser así, levanta una alerta aparte para que nadie se quede sin producto.
+const notifyIfLowStock = async (req, product) => {
+  try {
+    const settings = await settingsUtils.getOrCreateSettings();
+    const threshold = settings.operation?.lowStockThreshold ?? 10;
+
+    if (Number(product.quantity) > threshold) return;
+
+    await notificationUtils.createNotification({
+      req,
+      category: "inventory",
+      action: "low_stock",
+      title: "Alerta de stock",
+      message: `Stock bajo: ${product.name} quedó en ${product.quantity} unidades (mínimo ${threshold})`,
+      icon: "triangle-exclamation",
+      severity: "warning",
+      entity: { model: "Inventory", id: product._id, label: product.name },
+    });
+  } catch (error) {
+    console.error("inventoryController.notifyIfLowStock:", error);
+  }
+};
 
 // Obtiene todos los productos registrados en el inventario
 inventoryController.getAllInventory = async (req, res) => {
@@ -93,6 +120,21 @@ inventoryController.insertInventory = async (req, res) => {
     // Guardamos el producto en la base de datos
     await newInventory.save();
 
+    await notificationUtils.createNotification({
+      req,
+      category: "inventory",
+      action: "created",
+      title: "Insumo agregado",
+      message: (actor) =>
+        `${actor.name} agregó ${newInventory.name} al inventario (${newInventory.quantity} unidades)`,
+      icon: "box",
+      severity: "success",
+      entity: { model: "Inventory", id: newInventory._id, label: newInventory.name },
+    });
+
+    // Si entró ya por debajo del mínimo, avisamos de una vez
+    await notifyIfLowStock(req, newInventory);
+
     return res.status(201).json({
       message: "Product saved successfully",
       newInventory,
@@ -115,6 +157,17 @@ inventoryController.deleteInventory = async (req, res) => {
     }
 
     await inventoryModel.findByIdAndDelete(req.params.id);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "inventory",
+      action: "deleted",
+      title: "Insumo eliminado",
+      message: (actor) => `${actor.name} eliminó ${inventoryFound.name} del inventario`,
+      icon: "trash",
+      severity: "danger",
+      entity: { model: "Inventory", id: inventoryFound._id, label: inventoryFound.name },
+    });
 
     return res.status(200).json({
       message: "Product deleted successfully",
@@ -193,6 +246,27 @@ inventoryController.updateInventory = async (req, res) => {
         new: true,
       }
     );
+
+    // Si la cantidad cambió lo decimos explícitamente: es el dato que más
+    // le importa a quien administra la bodega.
+    const quantityChanged = Number(inventoryFound.quantity) !== Number(updatedInventory.quantity);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "inventory",
+      action: "updated",
+      title: "Insumo actualizado",
+      message: (actor) =>
+        quantityChanged
+          ? `${actor.name} ajustó ${updatedInventory.name}: de ${inventoryFound.quantity} a ${updatedInventory.quantity} unidades`
+          : `${actor.name} actualizó los datos de ${updatedInventory.name}`,
+      icon: "box",
+      severity: "info",
+      entity: { model: "Inventory", id: updatedInventory._id, label: updatedInventory.name },
+    });
+
+    // Tras el ajuste puede que haya quedado por debajo del mínimo
+    await notifyIfLowStock(req, updatedInventory);
 
     return res.status(200).json({
       message: "Product updated successfully",updatedInventory,

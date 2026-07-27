@@ -3,6 +3,7 @@ import adminModel from "../../../models/users/adminModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import invitationValidationsUtils from "../../../utils/auth/invitationValidationsUtils.js";
+import notificationUtils from "../../../utils/notifications/notificationUtils.js";
 import { config } from "../../../../config.js";
 
 const inviteAdminController = {};
@@ -61,6 +62,18 @@ inviteAdminController.sendInvitation = async (req, res) => {
       "Has sido invitado a SYSCOR",
       emailUtils.HTMLInvitationEmail(invitationLink, "Administrador")
     );
+
+    await notificationUtils.createNotification({
+      req,
+      category: "staff",
+      action: "invited",
+      title: "Invitación enviada",
+      message: (actor) =>
+        `${actor.name} invitó a ${normalizedEmail} a unirse como Administrador`,
+      icon: "envelope",
+      severity: "warning",
+      entity: { model: "Admin", id: null, label: normalizedEmail },
+    });
 
     return res.status(200).json({ message: "Invitation sent successfully." });
   } catch (error) {
@@ -161,6 +174,26 @@ inviteAdminController.acceptInvitation = async (req, res) => {
     });
 
     await newAdmin.save();
+
+    // El nuevo administrador todavía no tiene sesión: él mismo es el actor
+    const fullName = `${newAdmin.personalInfo.name} ${newAdmin.personalInfo.lastname}`.trim();
+
+    await notificationUtils.createNotification({
+      req,
+      category: "staff",
+      action: "registered",
+      title: "Nuevo administrador",
+      message: `Nuevo administrador registrado: ${fullName}`,
+      icon: "user-shield",
+      severity: "warning",
+      entity: { model: "Admin", id: newAdmin._id, label: fullName },
+      actor: {
+        id: newAdmin._id,
+        role: "admin",
+        name: fullName,
+        image: newAdmin.personalInfo.image || null,
+      },
+    });
 
     return res.status(201).json({ message: "Administrator account created successfully." });
   } catch (error) {
