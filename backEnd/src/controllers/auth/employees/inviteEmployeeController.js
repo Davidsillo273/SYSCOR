@@ -3,6 +3,7 @@ import employeeModel from "../../../models/users/employeeModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import invitationValidationsUtils from "../../../utils/auth/invitationValidationsUtils.js";
+import notificationUtils from "../../../utils/notifications/notificationUtils.js";
 import { config } from "../../../../config.js";
 
 const inviteEmployeeController = {};
@@ -85,6 +86,20 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
       "Has sido invitado a SYSCOR",
       emailUtils.HTMLInvitationEmail(invitationLink, "Empleado")
     );
+
+    const typeLabel = notificationUtils.EMPLOYEE_TYPE_LABELS[type] || type;
+
+    await notificationUtils.createNotification({
+      req,
+      category: "staff",
+      action: "invited",
+      title: "Invitación enviada",
+      message: (actor) =>
+        `${actor.name} invitó a ${normalizedEmail} a unirse como Empleado (${typeLabel})`,
+      icon: "envelope",
+      severity: "info",
+      entity: { model: "Employee", id: null, label: normalizedEmail },
+    });
 
     return res.status(200).json({ message: "Invitation sent successfully." });
   } catch (error) {
@@ -199,6 +214,30 @@ inviteEmployeeController.acceptInvitation = async (req, res) => {
     });
 
     await newEmployee.save();
+
+    // Quien acepta la invitación todavía no tiene sesión, así que el actor es
+    // la propia persona que acaba de registrarse.
+    const fullName = `${newEmployee.personalInfo.name} ${newEmployee.personalInfo.lastname}`.trim();
+    const typeLabel =
+      notificationUtils.EMPLOYEE_TYPE_LABELS[newEmployee.personalInfo.type] ||
+      newEmployee.personalInfo.type;
+
+    await notificationUtils.createNotification({
+      req,
+      category: "staff",
+      action: "registered",
+      title: "Nuevo empleado",
+      message: `Nuevo empleado registrado: ${fullName} (${typeLabel})`,
+      icon: "user-tie",
+      severity: "success",
+      entity: { model: "Employee", id: newEmployee._id, label: fullName },
+      actor: {
+        id: newEmployee._id,
+        role: "employee",
+        name: fullName,
+        image: newEmployee.personalInfo.image || null,
+      },
+    });
 
     return res.status(201).json({ message: "Employee account created successfully." });
   } catch (error) {

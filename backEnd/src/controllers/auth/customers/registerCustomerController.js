@@ -4,6 +4,7 @@ import customerModel from "../../../models/users/customerModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import customerUtils from "../../../utils/auth/customers/validationsCustomersUtils.js";
+import notificationUtils from "../../../utils/notifications/notificationUtils.js";
 
 const registerCustomerController = {};
 
@@ -246,6 +247,26 @@ registerCustomerController.setPassword = async (req, res) => {
 
     await newCustomer.save();
     res.clearCookie("customerRegistrationToken"); // el flujo de registro terminó, se descarta el token
+
+    // El cliente recién creado es su propio actor: todavía no ha iniciado sesión
+    const fullName = `${newCustomer.personalInfo.name} ${newCustomer.personalInfo.lastname}`.trim();
+
+    await notificationUtils.createNotification({
+      req,
+      category: "clients",
+      action: "registered",
+      title: "Nuevo cliente",
+      message: `Nuevo cliente registrado: ${fullName}`,
+      icon: "user-plus",
+      severity: "success",
+      entity: { model: "Customer", id: newCustomer._id, label: fullName },
+      actor: {
+        id: newCustomer._id,
+        role: "customer",
+        name: fullName,
+        image: newCustomer.personalInfo.image || null,
+      },
+    });
 
     return res.status(201).json({ message: "Account created successfully. Welcome to Taquería El Corral!" });
   } catch (error) {

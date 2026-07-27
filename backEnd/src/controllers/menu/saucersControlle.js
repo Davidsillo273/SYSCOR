@@ -2,6 +2,8 @@
 import saucersModel from "../../models/menu/saucersModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsSaucers from "../../utils/saucers/validationsSaucersUtils.js";
+// Utilidad para registrar los movimientos del menú como notificaciones
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 // Objeto para agrupar todas las funciones de los platillos
 const saucersController = {};
@@ -70,6 +72,18 @@ saucersController.insertSaucer = async (req, res) => {
 
     await newSaucer.save();
 
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "created",
+      title: "Platillo agregado",
+      message: (actor) =>
+        `${actor.name} agregó el platillo ${newSaucer.name} al menú ($${Number(newSaucer.price).toFixed(2)})`,
+      icon: "utensils",
+      severity: "success",
+      entity: { model: "Saucers", id: newSaucer._id, label: newSaucer.name },
+    });
+
     return res.status(200).json({message: "Saucer saved successfully",});
   } catch (error) {
     console.log("error " + error);
@@ -91,6 +105,18 @@ saucersController.deleteSaucer = async (req, res) => {
     }
 
     await saucersModel.findByIdAndDelete(req.params.id);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "deleted",
+      title: "Platillo eliminado",
+      message: (actor) => `${actor.name} eliminó el platillo ${saucerFound.name} del menú`,
+      icon: "trash",
+      severity: "danger",
+      entity: { model: "Saucers", id: saucerFound._id, label: saucerFound.name },
+    });
+
     return res.status(200).json({ message: "Saucer deleted successfully" });
   } catch (error) {
     console.log("error " + error);
@@ -142,6 +168,23 @@ saucersController.updateSaucer = async (req, res) => {
 
     await saucersModel.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
+    });
+
+    // Reportamos explícitamente el cambio de precio, que es lo más sensible del menú
+    const priceChanged = Number(saucerFound?.price) !== Number(price);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "updated",
+      title: "Platillo actualizado",
+      message: (actor) =>
+        priceChanged
+          ? `${actor.name} cambió el precio de ${name}: de $${Number(saucerFound?.price || 0).toFixed(2)} a $${Number(price).toFixed(2)}`
+          : `${actor.name} actualizó el platillo ${name}`,
+      icon: "utensils",
+      severity: "info",
+      entity: { model: "Saucers", id: req.params.id, label: name },
     });
 
     return res.status(200).json({message: "Saucer updated successfully",});

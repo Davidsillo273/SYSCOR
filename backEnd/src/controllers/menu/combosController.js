@@ -2,6 +2,8 @@
 import combosModel from "../../models/menu/combosModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsCombos from "../../utils/combos/validationsCombosUtils.js";
+// Utilidad para registrar los movimientos del menú como notificaciones
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 // Objeto para agrupar todas las funciones de los combos
 const combosController = {};
@@ -124,6 +126,18 @@ combosController.insertCombo = async (req, res) => {
 
     await newCombo.save();
 
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "created",
+      title: "Combo agregado",
+      message: (actor) =>
+        `${actor.name} agregó el combo ${newCombo.name} al menú ($${Number(newCombo.price).toFixed(2)})`,
+      icon: "shopping-bag",
+      severity: "success",
+      entity: { model: "Combos", id: newCombo._id, label: newCombo.name },
+    });
+
     return res.status(201).json({
       message: "Combo saved successfully",
       newCombo,
@@ -149,6 +163,17 @@ combosController.deleteCombo = async (req, res) => {
     }
 
     await combosModel.findByIdAndDelete(req.params.id);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "deleted",
+      title: "Combo eliminado",
+      message: (actor) => `${actor.name} eliminó el combo ${comboFound.name} del menú`,
+      icon: "trash",
+      severity: "danger",
+      entity: { model: "Combos", id: comboFound._id, label: comboFound.name },
+    });
 
     return res.status(200).json({ message: "Combo deleted successfully" });
   } catch (error) {
@@ -234,6 +259,22 @@ combosController.updateCombo = async (req, res) => {
       updatedData,
       { new: true }
     );
+
+    const priceChanged = Number(comboFound.price) !== Number(price);
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "updated",
+      title: "Combo actualizado",
+      message: (actor) =>
+        priceChanged
+          ? `${actor.name} cambió el precio del combo ${updatedCombo.name}: de $${Number(comboFound.price).toFixed(2)} a $${Number(price).toFixed(2)}`
+          : `${actor.name} actualizó el combo ${updatedCombo.name}`,
+      icon: "shopping-bag",
+      severity: "info",
+      entity: { model: "Combos", id: updatedCombo._id, label: updatedCombo.name },
+    });
 
     return res.status(200).json({
       message: "Combo updated successfully",

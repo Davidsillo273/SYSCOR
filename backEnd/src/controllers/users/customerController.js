@@ -2,6 +2,7 @@
 import customerModel from "../../models/users/customerModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 const customerController = {};
 
@@ -44,6 +45,19 @@ customerController.updateCustomer = async (req, res) => {
         ).select("-loginInfo.password");
 
         if (!updatedCustomer) return res.status(404).json({ message: "Customer not found" });
+
+        const customerName = `${updatedCustomer.personalInfo?.name || ""} ${updatedCustomer.personalInfo?.lastname || ""}`.trim();
+
+        await notificationUtils.createNotification({
+            req,
+            category: "clients",
+            action: "updated",
+            title: "Cliente actualizado",
+            message: (actor) => `${actor.name} actualizó los datos del cliente ${customerName}`,
+            icon: "user-pen",
+            severity: "info",
+            entity: { model: "Customer", id: updatedCustomer._id, label: customerName },
+        });
 
         return res.status(200).json({ message: "Customer updated successfully", data: updatedCustomer });
     } catch (error) {

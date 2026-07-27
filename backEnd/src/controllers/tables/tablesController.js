@@ -2,6 +2,8 @@ const tablesController = {};
 
 // Importamos el modelo de las mesas para interactuar con la base de datos
 import tablesModel from "../../models/tables/tablesModels.js";
+// Utilidad para registrar los movimientos como notificaciones del sistema
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 // Obtiene todas las mesas registradas en el restaurante
 tablesController.getTables = async (req, res) => {
@@ -29,6 +31,17 @@ tablesController.insertTable = async (req, res) => {
     // Guardamos la mesa en la base de datos
     await newTable.save();
 
+    await notificationUtils.createNotification({
+      req,
+      category: "tables",
+      action: "created",
+      title: "Nueva mesa",
+      message: (actor) => `${actor.name} habilitó la Mesa ${newTable.number}`,
+      icon: "chair",
+      severity: "success",
+      entity: { model: "Tables", id: newTable._id, label: `Mesa ${newTable.number}` },
+    });
+
     return res.status(201).json({ message: "Table saved" });
   } catch (error) {
     console.log("error " + error);
@@ -46,6 +59,17 @@ tablesController.deleteTable = async (req, res) => {
       return res.status(404).json({ message: "Table not found" });
     }
 
+    await notificationUtils.createNotification({
+      req,
+      category: "tables",
+      action: "deleted",
+      title: "Mesa eliminada",
+      message: (actor) => `${actor.name} eliminó la Mesa ${deletedTable.number}`,
+      icon: "trash",
+      severity: "danger",
+      entity: { model: "Tables", id: deletedTable._id, label: `Mesa ${deletedTable.number}` },
+    });
+
     return res.status(200).json({ message: "Table deleted" });
   } catch (error) {
     console.log("error " + error);
@@ -58,7 +82,9 @@ tablesController.updateTable = async (req, res) => {
   try {
     let { number, status } = req.body;
 
-  
+    // Guardamos el estado anterior para saber si la mesa cambió de disponible a ocupada
+    const previousTable = await tablesModel.findById(req.params.id).select("status");
+
     // Buscamos la mesa por su ID y le aplicamos los nuevos datos
     const tableUpdated = await tablesModel.findByIdAndUpdate(
       req.params.id,
@@ -72,6 +98,22 @@ tablesController.updateTable = async (req, res) => {
     if (!tableUpdated) {
       return res.status(404).json({ message: "Table not found" });
     }
+
+    const statusChanged = status !== undefined && previousTable?.status !== status;
+
+    await notificationUtils.createNotification({
+      req,
+      category: "tables",
+      action: statusChanged ? "status_changed" : "updated",
+      title: statusChanged ? "Mesa cambió de estado" : "Mesa actualizada",
+      message: (actor) =>
+        statusChanged
+          ? `${actor.name} cambió la Mesa ${tableUpdated.number} a ${tableUpdated.status}`
+          : `${actor.name} actualizó los datos de la Mesa ${tableUpdated.number}`,
+      icon: "chair",
+      severity: "info",
+      entity: { model: "Tables", id: tableUpdated._id, label: `Mesa ${tableUpdated.number}` },
+    });
 
     return res.status(200).json({ message: "Table updated" });
   } catch (error) {

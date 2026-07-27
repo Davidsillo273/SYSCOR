@@ -40,6 +40,8 @@ const employeeSchema = new mongoose.Schema(
         enum: ["active", "inactive", "suspended", "on_leave"],
         default: "active", // Estado actual en la empresa
       },
+      shift: { type: String, default: null }, // Turno asignado (ej. "Mañana", "Tarde", "Noche")
+      schedule: { type: String, default: null }, // Horario legible (ej. "8:00 AM - 4:00 PM")
     },
     // Permisos granulares específicos de este empleado (ej. "menu:create").
     // El admin los asigna al invitar o al editar el perfil del empleado.

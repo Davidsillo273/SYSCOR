@@ -3,6 +3,8 @@ const extrasController = {};
 // Importamos el modelo de los extras (complementos) y sus validaciones
 import extrasModel from "../../models/menu/extrasModel.js";
 import validationsExtras from "../../utils/extras/validationsExtrasUtils.js";
+// Utilidad para registrar los movimientos del menú como notificaciones
+import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 // Obtiene todos los complementos (extras) del menú, sin importar su estado
 extrasController.getExtras = async (req, res) => {
@@ -51,6 +53,18 @@ extrasController.insertExtras = async (req, res) => {
     // Guardamos en la base de datos
     await newExtra.save();
 
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "created",
+      title: "Extra agregado",
+      message: (actor) =>
+        `${actor.name} agregó el extra ${newExtra.name} al menú ($${Number(newExtra.price).toFixed(2)})`,
+      icon: "star",
+      severity: "success",
+      entity: { model: "Extras", id: newExtra._id, label: newExtra.name },
+    });
+
     return res.status(201).json({ message: "Extra saved" });
   } catch (error) {
     console.log("error" + error);
@@ -67,6 +81,17 @@ extrasController.deleteExtra = async (req, res) => {
     if (!deletedExtra) {
       return res.status(404).json({ message: "Extra not found" });
     }
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "deleted",
+      title: "Extra eliminado",
+      message: (actor) => `${actor.name} eliminó el extra ${deletedExtra.name} del menú`,
+      icon: "trash",
+      severity: "danger",
+      entity: { model: "Extras", id: deletedExtra._id, label: deletedExtra.name },
+    });
 
     return res.status(200).json({ message: "Extra deleted" });
   } catch (error) {
@@ -100,6 +125,18 @@ extrasController.updateExtra = async (req, res) => {
     if (!extraUpdated) {
       return res.status(404).json({ message: "Extra not found" });
     }
+
+    await notificationUtils.createNotification({
+      req,
+      category: "menu",
+      action: "updated",
+      title: "Extra actualizado",
+      message: (actor) =>
+        `${actor.name} actualizó el extra ${extraUpdated.name} ($${Number(extraUpdated.price).toFixed(2)})`,
+      icon: "star",
+      severity: "info",
+      entity: { model: "Extras", id: extraUpdated._id, label: extraUpdated.name },
+    });
 
     return res.status(200).json({ message: "Extra updated" });
   } catch (error) {

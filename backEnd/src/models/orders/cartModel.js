@@ -9,6 +9,12 @@ const cartSchema = new Schema({
         ref: "Customer", // Hace referencia al modelo de Cliente
         required: true
     },
+    // Mesa donde se atiende este pedido (opcional, ej. pedidos para llevar no tienen mesa)
+    table: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tables",
+        default: null
+    },
     // Lista de detalles que contiene los productos agregados al carrito
     details: [
         {

@@ -4,6 +4,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 // Importamos todas nuestras rutas desde el archivo principal de rutas
 import allRoutes from "./src/routes/allRoutes/index.js";
+// Middleware que identifica al usuario sin bloquear las rutas públicas
+import { attachUser } from "./src/middlewares/auth/authMiddleware.js";
 
 // Inicializamos la aplicación de Express
 const app = express();
@@ -23,6 +25,10 @@ app.use(cors({
 app.use(cookieParser());
 // Permitimos que nuestra aplicación pueda entender los datos que vienen en formato JSON
 app.use(express.json());
+
+// Intentamos identificar al usuario en TODAS las peticiones (sin bloquear ninguna).
+// Gracias a esto las notificaciones pueden decir quién realizó cada movimiento.
+app.use(attachUser);
 
 // Definimos la ruta base para nuestra API, por defecto usamos "/api"
 const api = process.env.API_URL || "/api";
