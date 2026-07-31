@@ -4,8 +4,8 @@ import inviteAdminController from "../../../controllers/auth/admins/inviteAdminC
 import upload from "../../../utils/cloudinaryConfig.js";
 const router = Router();
 
-router.post("/sendInvitation", inviteAdminController.sendInvitation);
-router.get("/checkInvitation", inviteAdminController.validateInvitation);
-router.post("/acceptInvitation", upload.single("image"), inviteAdminController.acceptInvitation);
+router.post("/send-invitation", inviteAdminController.sendInvitation);
+router.get("/check-invitation", inviteAdminController.validateInvitation);
+router.post("/accept-invitation", upload.single("image"), inviteAdminController.acceptInvitation);
 
 export default router;

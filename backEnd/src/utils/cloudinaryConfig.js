@@ -3,14 +3,14 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { config } from "../../config.js";
 
-//#1- Configuramos cloudinary con nuestras credenciales
+// Le damos a Cloudinary nuestras credenciales para que nos deje subir archivos a su servicio
 cloudinary.config({
-  cloud_name: config.cloudinary.cloudinary_name,
-  api_key: config.cloudinary.cloudinary_api_key,
-  api_secret: config.cloudinary.cloudinary_api_secret,
+  cloud_name: config.cloudinary.cloudinaryName,
+  api_key: config.cloudinary.cloudinaryApiKey,
+  api_secret: config.cloudinary.cloudinaryApiSecret,
 });
 
-//#2- Como guardamos las imágenes
+// Le decimos en qué carpeta de Cloudinary se guardan las imágenes y qué tipos de archivo aceptamos
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -19,9 +19,7 @@ const storage = new CloudinaryStorage({
   },
 });
 
-
-
-//#3- configurar multer
+// Middleware que recibe el archivo que sube el usuario y lo manda a Cloudinary
 const upload = multer({ storage });
 
 export default upload;

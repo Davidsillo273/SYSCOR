@@ -15,7 +15,7 @@ invitationValidationsUtils.validateEmployeeType = (type) => {
     if (!type || !validTypes.includes(type)) {
         return {
             valid: false,
-            message: `Employee type must be one of: ${validTypes.join(", ")}.`,
+            message: `El puesto del empleado debe ser uno de: ${validTypes.join(", ")}.`,
         };
     }
     return { valid: true };

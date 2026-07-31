@@ -38,8 +38,27 @@ const validateStatus = (status) => {
   return { valid: true };
 };
 
+// La imagen es opcional: si no se manda, el frontend usa un placeholder
+const validateImage = () => ({ valid: true });
+
+// Si el extra depende de insumos de inventario, necesita al menos un ingrediente
+const validateIngredients = (ingredients, isCompound) => {
+  if (!isCompound) return { valid: true };
+
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    return {
+      valid: false,
+      message: "Este extra depende de insumos: agrega al menos un ingrediente.",
+    };
+  }
+
+  return { valid: true };
+};
+
 export default {
   validateName,
   validatePrice,
   validateStatus,
+  validateImage,
+  validateIngredients,
 };

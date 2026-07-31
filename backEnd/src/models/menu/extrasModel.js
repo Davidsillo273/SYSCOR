@@ -1,5 +1,5 @@
-// Importamos la herramienta para crear el modelo en la base de datos
-import {Schema, model} from 'mongoose';
+import mongoose, {Schema, model} from 'mongoose';
+import { UNIT_LIST } from "../../utils/units/unitsUtils.js"
 
 // Definimos la estructura para los Extras (adicionales al menú)
 const extraSchema = new Schema({
@@ -10,7 +10,22 @@ const extraSchema = new Schema({
     // Categoría libre para agrupar extras (Verduras, Lácteos, Salsas, Especial...)
     category: { type: String },
     // Si está disponible o no
-    status: { type: String }
+    status: { type: String },
+    // Foto del extra (opcional: si no hay, el front usa un placeholder)
+    image: { type: String },
+    // ID de la imagen en Cloudinary
+    publicId: { type: String },
+    // true cuando este extra depende de insumos de inventario (ej. "Guacamole
+    // extra" hecho de aguacate + limón + sal), en vez de ser un simple cargo
+    // adicional sin relación con el stock
+    isCompound: { type: Boolean, default: false },
+    // Ingredientes de inventario que consume este extra. Al confirmar un pedido
+    // que lo incluya, se descuenta cada uno multiplicado por la cantidad pedida.
+    ingredients: [{
+        ingredientId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory" },
+        quantity: { type: Number },
+        unit: { type: String, enum: UNIT_LIST }
+    }]
 },{
     // Para saber cuándo se añadió al sistema
     timestamps: true,

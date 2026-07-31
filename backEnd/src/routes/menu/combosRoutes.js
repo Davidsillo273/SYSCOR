@@ -16,9 +16,12 @@ router.get("/active", validateAuthCookie(["customer", "admin"]), combosControlle
 // Ranking de combos más vendidos
 router.get("/best-sellers", combosController.getBestSellers);
 
+// Revisa si ya existe un combo con ese nombre (sugerencia, no bloqueo)
+router.get("/check-name", combosController.checkName);
+
 // Obtener un combo por ID, actualizarlo y eliminarlo
 router.route("/:id")
-    .put(upload.single("image"), combosController.updateCombo)
+    .patch(upload.single("image"), combosController.updateCombo)
     .delete(combosController.deleteCombo);
 
 export default router;

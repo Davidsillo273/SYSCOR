@@ -10,12 +10,12 @@ logoutController.logout = async (req, res) => {
         // Borramos la cookie de autenticación del navegador del usuario
         res.clearCookie("authCookie", cookieConfig);
         // Respondemos con un mensaje de éxito
-        return res.status(200).json({ message: "Session closed successfully" });
+        return res.status(200).json({ title: "Sesión cerrada", message: "Tu sesión se cerró correctamente." });
     } catch (error) {
         // Si algo sale mal, lo anotamos en la consola para revisarlo
-        console.error("Error en logout:", error);
+        console.error("Error en logoutController.logout:", error);
         // Y le decimos al usuario que hubo un problema interno
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al cerrar la sesión." });
     }
 };
 

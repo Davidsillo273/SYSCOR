@@ -1,19 +1,19 @@
-
-import adminModel from "../../models/users/adminModel.js";
-import employeeModel from "../../models/users/employeeModel.js";
-import customerModel from "../../models/users/customerModel.js";
+import AdminModel from "../../models/users/adminModel.js";
+import EmployeeModel from "../../models/users/employeeModel.js";
+import CustomerModel from "../../models/users/customerModel.js";
 
 const authMeController = {};
 
 const MODELS_BY_ROLE = {
-  admin: adminModel,
-  employee: employeeModel,
-  customer: customerModel,
+  admin: AdminModel,
+  employee: EmployeeModel,
+  customer: CustomerModel,
 };
 
-// Campos a excluir siempre, sin importar el rol 
+// Campos a excluir siempre, sin importar el rol
 const EXCLUDED_FIELDS = "-loginInfo.password -loginInfo.loginAttempts -loginInfo.timeOut -__v";
 
+// Le dice al frontend quién es el usuario que tiene la sesión activa ahora mismo
 authMeController.getMe = async (req, res) => {
   try {
     // req.user lo llena validateAuthCookie a partir del JWT decodificado
@@ -21,7 +21,7 @@ authMeController.getMe = async (req, res) => {
 
     const model = MODELS_BY_ROLE[role];
     if (!model) {
-      return res.status(400).json({ message: "Unknown user role." });
+      return res.status(400).json({ title: "Rol desconocido", message: "El rol del usuario no es válido." });
     }
 
     // Consultamos la BD (no solo el JWT) para que datos como nombre, imagen
@@ -29,7 +29,7 @@ authMeController.getMe = async (req, res) => {
     const user = await model.findById(id).select(EXCLUDED_FIELDS);
 
     if (!user) {
-      return res.status(401).json({ message: "Session no longer valid." });
+      return res.status(401).json({ title: "Sesión inválida", message: "Tu sesión ya no es válida. Inicia sesión nuevamente." });
     }
 
     // Respuesta homogénea entre roles: el frontend no necesita saber
@@ -44,7 +44,7 @@ authMeController.getMe = async (req, res) => {
     });
   } catch (error) {
     console.error("authMeController.getMe:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al obtener tu sesión." });
   }
 };
 

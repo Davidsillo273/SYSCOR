@@ -1,4 +1,3 @@
-// Importamos mongoose
 import { Schema, model } from 'mongoose';
 
 // Definimos la estructura para las Mesas del restaurante

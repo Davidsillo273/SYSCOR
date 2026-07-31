@@ -5,6 +5,7 @@ import extrasRouters from "../menu/extrasRoutes.js";
 import drinksRouters from "../menu/drinksRoutes.js";
 import saucerRouters from "../menu/saucersRoutes.js";
 import combosRouters from "../menu/combosRoutes.js";
+import drinkSetsRouters from "../menu/drinkSetsRoutes.js";
 import inventoryRoutes from "../inventory/inventoryRoutes.js";
 import customerRoutes from "../users/customerRoutes.js";
 import employeeRoutes from "../users/employeeRoutes.js";
@@ -13,6 +14,8 @@ import wompiRoutes from "../orders/wompiRoutes.js"
 import tablesRoutes from "../tables/tablesRoutes.js"
 import notificationsRoutes from "../notifications/notificationsRoutes.js";
 import settingsRoutes from "../settings/settingsRoutes.js";
+import aiRoutes from "../ai/aiRoutes.js";
+import saucerChatRoutes from "../chat/saucerChatRoutes.js";
 
 
 // Aquí importamos todas las rutas de cada módulo
@@ -41,21 +44,28 @@ import authMeRoutes from "../auth/authMeRoutes.js";
 const router = Router();
 
 //Nombres de los endpoints
-router.use("/carts", cartRoutes);
-router.use("/extras",extrasRouters);
-router.use("/drinks", drinksRouters);
-router.use("/saucers",saucerRouters);
-router.use("/combos", combosRouters);
-router.use("/inventory",inventoryRoutes);
-router.use("/customers", customerRoutes);
-router.use("/employees",employeeRoutes);
-router.use("/admins", adminRoutes);
+// Menú: todo lo que el cliente puede pedir vive bajo /menu
+router.use("/menu/extras", extrasRouters);
+router.use("/menu/drinks", drinksRouters);
+router.use("/menu/saucers", saucerRouters);
+router.use("/menu/combos", combosRouters);
+router.use("/menu/drink-sets", drinkSetsRouters);
+
+// Pedidos: carritos y pagos viven bajo /orders
+router.use("/orders/carts", cartRoutes);
+router.use("/orders/wompi", wompiRoutes);
+
+// Usuarios administrativos: admins, empleados y clientes viven bajo /users
+router.use("/users/customers", customerRoutes);
+router.use("/users/employees", employeeRoutes);
+router.use("/users/admins", adminRoutes);
+
+router.use("/inventory", inventoryRoutes);
 router.use("/tables", tablesRoutes);
 router.use("/notifications", notificationsRoutes);
 router.use("/settings", settingsRoutes);
-
-//Wompi
-router.use("/wompi", wompiRoutes);
+router.use("/ai", aiRoutes);
+router.use("/chat", saucerChatRoutes);
 
 //auth - customers
 router.use("/auth/customers/register", registerCustomerRoutes);
@@ -70,7 +80,7 @@ router.use("/auth/admins/login", loginAdminRoutes);
 //auth - logout
 router.use("/auth/logout", logoutRoutes);
 //auth - recovery password
-router.use("/auth/recoveryPassword", recoveryPasswordRoutes);
+router.use("/auth/recovery-password", recoveryPasswordRoutes);
 //auth - change password (con sesión activa)
 router.use("/auth", changePasswordRoutes);
 //auth - authMe

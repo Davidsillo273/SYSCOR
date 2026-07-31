@@ -1,5 +1,5 @@
 // Importamos el modelo de empleados y utilidades para iniciar sesión
-import employeeModel from "../../../models/users/employeeModel.js";
+import EmployeeModel from "../../../models/users/employeeModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 
@@ -10,18 +10,18 @@ loginEmployeeController.loginEmployee = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const result = await processLogin(employeeModel, email, password, "employee");
+        const result = await processLogin(EmployeeModel, email, password, "employee");
 
         if (result.error) {
-            return res.status(result.status).json({ message: result.message });
+            return res.status(result.status).json({ title: result.title, message: result.message });
         }
 
         res.cookie("authCookie", result.token, cookieConfig);
 
-        return res.status(200).json({ message: result.message });
+        return res.status(200).json({ title: "Bienvenido", message: result.message });
     } catch (error) {
-        console.error("Error in Employee login:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("loginEmployeeController.loginEmployee:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al iniciar sesión." });
     }
 };
 

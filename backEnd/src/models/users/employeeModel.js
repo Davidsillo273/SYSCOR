@@ -1,4 +1,3 @@
-// Importamos mongoose
 import mongoose from "mongoose";
 
 // Estructura de datos para un Empleado
@@ -8,7 +7,7 @@ const employeeSchema = new mongoose.Schema(
     personalInfo: {
       name: { type: String, required: true, trim: true },
       lastname: { type: String, required: true, trim: true },
-      DUI_NIT: { type: String, required: true, trim: true }, // Documentos de identidad
+      duiNit: { type: String, required: true, trim: true }, // Documento de identidad (DUI o NIT)
       address: { type: String, required: true, trim: true },
       phone: { type: String, required: true, trim: true },
       image: { type: String, default: null },

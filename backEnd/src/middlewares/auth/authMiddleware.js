@@ -1,6 +1,6 @@
 import jsonwebtoken from "jsonwebtoken";
 import { config } from "../../../config.js";
-import employeeModel from "../../models/users/employeeModel.js";
+import EmployeeModel from "../../models/users/employeeModel.js";
 
 // Este middleware NO bloquea a nadie: solo intenta averiguar quién está haciendo la petición.
 // Si viene una cookie válida, deja los datos del usuario en req.user; si no viene o está dañada,
@@ -15,7 +15,7 @@ export const attachUser = (req, res, next) => {
         // Sin cookie no hay nada que averiguar, seguimos de largo
         if (!authCookie) return next();
 
-        req.user = jsonwebtoken.verify(authCookie, config.JWT.secret);
+        req.user = jsonwebtoken.verify(authCookie, config.jwt.secret);
     } catch (error) {
         // Un token vencido o inválido aquí no es un error: solo significa que
         // no sabemos quién es. La petición continúa como anónima.
@@ -30,44 +30,44 @@ export const attachUser = (req, res, next) => {
 export const validateAuthCookie = (allowedTypes = []) => {
     return async (req, res, next) => {
         try {
-            // #1 - Extraemos la galleta (cookie) llamada 'authCookie' que nos envía el usuario.
+            // Extraemos la galleta (cookie) llamada 'authCookie' que nos envía el usuario.
             // Aquí es donde está guardado el token que confirma quién inició sesión.
             const { authCookie } = req.cookies;
 
             // Si el usuario no nos envió la cookie, no lo dejamos pasar.
             if (!authCookie) {
-                return res.status(403).json({ message: "No cookie found, Authorization required" });
+                return res.status(403).json({ title: "Sesión requerida", message: "No se encontró una sesión activa. Inicia sesión para continuar." });
             }
 
             // Desciframos la información que está adentro del token usando nuestra llave secreta.
-            const decoded = jsonwebtoken.verify(authCookie, config.JWT.secret);
+            const decoded = jsonwebtoken.verify(authCookie, config.jwt.secret);
 
             // Revisamos si el rol del usuario (que viene dentro del token) está en la lista de permitidos.
             if (!allowedTypes.includes(decoded.role)) {
-                return res.status(401).json({ message: "Access denied" });
+                return res.status(401).json({ title: "Acceso denegado", message: "No tenés permiso para acceder a este recurso." });
             }
 
             // Los empleados tienen reglas de permisos más complejas (pueden cambiar si el jefe lo decide).
             // Por eso, solo si es empleado, hacemos una verificación extra en la base de datos.
             if (decoded.role === "employee") {
                 // Buscamos al empleado en la base de datos para ver su estado actual y la versión de sus permisos
-                const employee = await employeeModel.findById(decoded.id).select("tokenVersion workInfo.status");
+                const employee = await EmployeeModel.findById(decoded.id).select("tokenVersion workInfo.status");
 
                 // Si por alguna razón el empleado ya no existe (fue borrado)
                 if (!employee) {
-                    return res.status(401).json({ message: "Account no longer exists. Please log in again." });
+                    return res.status(401).json({ title: "Cuenta no encontrada", message: "Esta cuenta ya no existe. Inicia sesión nuevamente." });
                 }
 
                 // Si el empleado está suspendido o inactivo, no lo dejamos continuar
                 if (employee.workInfo.status !== "active") {
-                    return res.status(403).json({ message: "Account is not active." });
+                    return res.status(403).json({ title: "Cuenta inactiva", message: "Tu cuenta no está activa. Contacta a un administrador." });
                 }
 
                 // Si la versión de los permisos en el token es diferente a la de la base de datos,
                 // significa que un administrador le cambió los permisos recientemente.
                 // Le pedimos que inicie sesión otra vez para actualizar su token.
                 if (decoded.tokenVersion !== employee.tokenVersion) {
-                    return res.status(401).json({ message: "Your permissions have changed. Please log in again." });
+                    return res.status(401).json({ title: "Permisos actualizados", message: "Tus permisos cambiaron recientemente. Inicia sesión nuevamente." });
                 }
             }
 
@@ -81,16 +81,16 @@ export const validateAuthCookie = (allowedTypes = []) => {
         } catch (error) {
             // Si el token ya caducó (pasó el tiempo límite)
             if (error.name === "TokenExpiredError") {
-                return res.status(401).json({ message: "Session expired, please log in again" });
+                return res.status(401).json({ title: "Sesión expirada", message: "Tu sesión venció. Inicia sesión nuevamente." });
             }
             // Si el token fue modificado, está dañado o es inventado
             if (error.name === "JsonWebTokenError") {
-                return res.status(401).json({ message: "Invalid session token" });
+                return res.status(401).json({ title: "Sesión inválida", message: "El token de sesión no es válido." });
             }
 
             // Si ocurre cualquier otro error inesperado, lo registramos y devolvemos error 500
             console.error("validateAuthCookie error:", error);
-            return res.status(500).json({ message: "Internal server error" });
+            return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al validar tu sesión." });
         }
     };
 };

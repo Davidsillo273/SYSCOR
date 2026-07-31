@@ -5,10 +5,22 @@ import validationsDrinks from "../../utils/drinks/validationsDrinksUtils.js";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
 import settingsUtils from "../../utils/settings/settingsUtils.js";
-import cartModel from "../../models/orders/cartModel.js";
+import CartModel from "../../models/orders/cartModel.js";
+import { findByNameInsensitive } from "../../utils/common/duplicateNameUtils.js";
 
 // Creamos un objeto para agrupar todas las funciones de bebidas
 const drinksController = {};
+
+// Busca si ya existe una bebida con ese nombre (sugerencia, no bloqueo)
+drinksController.checkName = async (req, res) => {
+  try {
+    const existing = await findByNameInsensitive(drinkModel, req.query.name);
+    return res.status(200).json({ existing: existing || null });
+  } catch (error) {
+    console.error("drinksController.checkName:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
+  }
+};
 
 // La receta llega como FormData, así que el arreglo viaja como string JSON
 const parseRecipe = (rawRecipe) => {
@@ -50,11 +62,11 @@ const notifyIfLowStock = async (req, drink) => {
 // Obtiene todas las bebidas guardadas en el menú
 drinksController.getAllDrinks = async (req, res) => {
   try {
-    const drinks = await drinkModel.find();
+    const drinks = await drinkModel.find().sort({ createdAt: -1 });
     return res.status(200).json(drinks);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("drinksController.getAllDrinks:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -65,8 +77,8 @@ drinksController.getActiveDrinks = async (req, res) => {
 
     return res.status(200).json(drinks);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("drinksController.getActiveDrinks:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -78,7 +90,7 @@ drinksController.getBestSellers = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 5;
 
-    const ranking = await cartModel.aggregate([
+    const ranking = await CartModel.aggregate([
       { $unwind: "$details" },
       { $unwind: "$details.extras" },
       { $unwind: "$details.extras.drinks" },
@@ -104,15 +116,15 @@ drinksController.getBestSellers = async (req, res) => {
 
     return res.status(200).json(ranking);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("drinksController.getBestSellers:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Crea una nueva bebida en la base de datos (imagen y receta opcionales)
 drinksController.insertDrink = async (req, res) => {
   try {
-    const { name, price, quantity, status, category, subcategory } = req.body;
+    const { name, price, quantity, status, category, subcategory, description } = req.body;
     const recipe = parseRecipe(req.body.recipe);
 
     let validation = validationsDrinks.validateName(name);
@@ -135,6 +147,11 @@ drinksController.insertDrink = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    validation = validationsDrinks.validateRecipe(recipe, category);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     // Nace disponible por default: el admin no crea algo pensado para estar deshabilitado
     const finalStatus = status || "disponible";
     validation = validationsDrinks.validateStatus(finalStatus);
@@ -148,10 +165,11 @@ drinksController.insertDrink = async (req, res) => {
       price,
       category,
       subcategory,
+      description: description || "",
       quantity: category === "tercero" ? quantity : undefined,
       status: finalStatus,
       recipe: category === "casa" ? recipe : [],
-      ...(req.file ? { image: req.file.path, public_id: req.file.filename } : {}),
+      ...(req.file ? { image: req.file.path, publicId: req.file.filename } : {}),
     });
 
     // Guardar en la base de datos
@@ -172,11 +190,11 @@ drinksController.insertDrink = async (req, res) => {
     await notifyIfLowStock(req, newDrink);
 
     return res.status(200).json({
-      message: "Drink saved successfully",
+      title: "Bebida agregada", message: "La bebida se guardó correctamente.",
     });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    console.error("drinksController.insertDrink:", error);
+    return res.status(500).json({title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde.",});
   }
 };
 
@@ -185,12 +203,12 @@ drinksController.deleteDrink = async (req, res) => {
   try {
     const drinkFound = await drinkModel.findById(req.params.id);
     if (!drinkFound) {
-      return res.status(404).json({ message: "Drink not found" });
+      return res.status(404).json({ title: "Bebida no encontrada", message: "No se encontró la bebida solicitada." });
     }
 
     // Si tiene imagen asociada, la borramos de Cloudinary
-    if (drinkFound.public_id) {
-      await cloudinary.uploader.destroy(drinkFound.public_id);
+    if (drinkFound.publicId) {
+      await cloudinary.uploader.destroy(drinkFound.publicId);
     }
 
     await drinkModel.findByIdAndDelete(req.params.id);
@@ -206,17 +224,17 @@ drinksController.deleteDrink = async (req, res) => {
       entity: { model: "Drinks", id: drinkFound._id, label: drinkFound.name },
     });
 
-    return res.status(200).json({ message: "Drink deleted successfully" });
+    return res.status(200).json({ title: "Bebida eliminada", message: "La bebida se eliminó correctamente." });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("drinksController.deleteDrink:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Actualiza los datos de una bebida (precio, nombre, o si sube una imagen nueva)
 drinksController.updateDrink = async (req, res) => {
   try {
-    const { name, price, quantity, status, category, subcategory } = req.body;
+    const { name, price, quantity, status, category, subcategory, description } = req.body;
     const recipe = parseRecipe(req.body.recipe);
 
     // Validaciones
@@ -232,13 +250,16 @@ drinksController.updateDrink = async (req, res) => {
     validation = validationsDrinks.validateQuantity(quantity, category);
     if (!validation.valid) return res.status(400).json({ message: validation.message });
 
+    validation = validationsDrinks.validateRecipe(recipe, category);
+    if (!validation.valid) return res.status(400).json({ message: validation.message });
+
     validation = validationsDrinks.validateStatus(status);
     if (!validation.valid) return res.status(400).json({ message: validation.message });
 
     // Verificar que la bebida existe
     const drinkFound = await drinkModel.findById(req.params.id);
     if (!drinkFound) {
-      return res.status(404).json({ message: "Drink not found" });
+      return res.status(404).json({ title: "Bebida no encontrada", message: "No se encontró la bebida solicitada." });
     }
 
     const updatedData = {
@@ -246,6 +267,7 @@ drinksController.updateDrink = async (req, res) => {
       price,
       category,
       subcategory,
+      description: description || "",
       status,
       quantity: category === "tercero" ? quantity : undefined,
       recipe: category === "casa" ? recipe : [],
@@ -253,11 +275,11 @@ drinksController.updateDrink = async (req, res) => {
 
     // Si se envió una nueva imagen, borramos la anterior (si existía) y guardamos la nueva
     if (req.file) {
-      if (drinkFound.public_id) {
-        await cloudinary.uploader.destroy(drinkFound.public_id);
+      if (drinkFound.publicId) {
+        await cloudinary.uploader.destroy(drinkFound.publicId);
       }
       updatedData.image = req.file.path;
-      updatedData.public_id = req.file.filename;
+      updatedData.publicId = req.file.filename;
     }
 
     const updatedDrink = await drinkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
@@ -281,10 +303,10 @@ drinksController.updateDrink = async (req, res) => {
 
     await notifyIfLowStock(req, updatedDrink);
 
-    return res.status(200).json({ message: "Drink updated successfully" });
+    return res.status(200).json({ title: "Bebida actualizada", message: "La bebida se actualizó correctamente." });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("drinksController.updateDrink:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 

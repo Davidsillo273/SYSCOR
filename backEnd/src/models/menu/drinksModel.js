@@ -1,8 +1,5 @@
-// Importamos mongoose para interactuar con la base de datos
 import {Schema, model} from "mongoose"
-
-// Unidades de medida más comunes para describir cantidades de una receta
-const RECIPE_UNITS = ["unidad", "g", "kg", "ml", "l", "cucharadita", "cucharada", "taza", "vaso", "pizca"];
+import { UNIT_LIST } from "../../utils/units/unitsUtils.js"
 
 // Definimos la estructura de datos para las Bebidas (Drinks)
 const drinkSchema = new Schema({
@@ -15,16 +12,19 @@ const drinkSchema = new Schema({
     // 'casa' = se prepara en el local (sin stock propio, puede tener receta)
     // 'tercero' = se compra ya embotellada/enlatada (sí lleva stock)
     category: { type: String, enum: ["casa", "tercero"] },
-    // Subcategoría libre para clasificar dentro de la categoría (alcohólica, lite, gaseosa, natural...)
+    // Subcategoría para clasificar dentro de la categoría (alcohólica, lite, gaseosa, natural...)
     subcategory: { type: String },
+    // Descripción libre de la bebida
+    description: { type: String },
     // Cantidad en inventario. Solo aplica a bebidas 'tercero'
     quantity: { type: Number },
     // Estado (ej. disponible, inactiva)
     status: { type: String, default: "disponible" },
     // ID para identificar la imagen en la nube
-    public_id: { type: String },
-    // Receta opcional: solo tiene sentido para bebidas 'casa'. No descuenta inventario,
-    // es puramente informativo para saber cómo se prepara la bebida.
+    publicId: { type: String },
+    // Receta opcional: solo tiene sentido para bebidas 'casa'. Los ingredientes
+    // con tracked:true (ligados a un insumo real) SÍ descuentan inventario al
+    // confirmarse una orden que use esta bebida dentro de un combo.
     recipe: [{
         // Nombre del ingrediente
         name: { type: String },
@@ -32,9 +32,8 @@ const drinkSchema = new Schema({
         tracked: { type: Boolean, default: false },
         // Referencia al insumo en Inventario (null si es un ingrediente "solo receta", ej. agua)
         inventoryId: { type: Schema.Types.ObjectId, ref: "Inventory", default: null },
-        // String para admitir medidas como "1/2", "una pizca", etc.
-        quantity: { type: String },
-        unit: { type: String, enum: RECIPE_UNITS }
+        quantity: { type: Number },
+        unit: { type: String, enum: UNIT_LIST }
     }]
 },
 {

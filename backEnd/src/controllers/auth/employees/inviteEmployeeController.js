@@ -1,5 +1,5 @@
 // Importamos los modelos y utilidades necesarios para gestionar empleados, enviar correos y validar datos
-import employeeModel from "../../../models/users/employeeModel.js";
+import EmployeeModel from "../../../models/users/employeeModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import invitationValidationsUtils from "../../../utils/auth/invitationValidationsUtils.js";
@@ -20,7 +20,7 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
     name,
     lastname,
     phone,
-    DUI_NIT,
+    duiNit,
     address,
     type,
     salary,
@@ -30,30 +30,34 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
     workInsurance,
   } = req.body;
 
+  // Revisamos todos los campos antes de mandar nada: si algo falla, avisamos apenas ese primer error
   const validation = utils.runValidations([
     () => utils.validateEmail(email),
-    () => utils.validateName(name, "First name"),
-    () => utils.validateName(lastname, "Last name"),
+    () => utils.validateName(name, "El nombre"),
+    () => utils.validateName(lastname, "El apellido"),
     () => utils.validatePhone(phone),
     () => utils.validateAddress(address),
     () => invitationValidationsUtils.validateEmployeeType(type),
-    () => (AFP !== undefined ? utils.validatePositiveNumber(AFP, "AFP") : { valid: true }),
-    () => (rent !== undefined ? utils.validatePositiveNumber(rent, "Rent") : { valid: true }),
-    () => (additionalPay !== undefined ? utils.validatePositiveNumber(additionalPay, "Additional pay") : { valid: true }),
+    () => (AFP !== undefined ? utils.validatePositiveNumber(AFP, "El AFP") : { valid: true }),
+    () => (rent !== undefined ? utils.validatePositiveNumber(rent, "La renta") : { valid: true }),
+    () => (additionalPay !== undefined ? utils.validatePositiveNumber(additionalPay, "El pago adicional") : { valid: true }),
   ]);
 
   if (!validation.valid) {
-    return res.status(400).json({ message: validation.message });
+    return res.status(400).json({ title: "Datos inválidos", message: validation.message });
   }
 
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
-    const exists = await employeeModel.findOne({ "loginInfo.email": normalizedEmail });
+    // Si ya existe un empleado con ese correo, no tiene sentido invitarlo de nuevo
+    const exists = await EmployeeModel.findOne({ "loginInfo.email": normalizedEmail });
     if (exists) {
-      return res.status(409).json({ message: "An employee with this email already exists." });
+      return res.status(409).json({ title: "Empleado ya existe", message: "Ya existe un empleado registrado con este correo electrónico." });
     }
 
+    // Guardamos todos los datos dentro de un token firmado: así el empleado
+    // no puede alterar su salario ni su puesto cuando complete el registro
     const invitationToken = emailUtils.generateToken(
       {
         email: normalizedEmail,
@@ -64,7 +68,7 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
           name: name.trim(),
           lastname: lastname.trim(),
           phone: phone.trim(),
-          DUI_NIT: DUI_NIT.trim(),
+          duiNit: duiNit.trim(),
           address: address.trim(),
           type,
         },
@@ -81,6 +85,7 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
 
     const invitationLink = `${config.frontendUrl}/employee/accept-invitation?token=${invitationToken}`;
 
+    // Le mandamos el correo con el enlace antes de confirmar nada al admin
     await emailUtils.sendEmail(
       email,
       "Has sido invitado a SYSCOR",
@@ -101,10 +106,10 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
       entity: { model: "Employee", id: null, label: normalizedEmail },
     });
 
-    return res.status(200).json({ message: "Invitation sent successfully." });
+    return res.status(200).json({ title: "Invitación enviada", message: "La invitación se envió correctamente al correo indicado." });
   } catch (error) {
     console.error("inviteEmployeeController.sendInvitation:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al enviar la invitación." });
   }
 };
 
@@ -117,14 +122,14 @@ inviteEmployeeController.validateInvitation = async (req, res) => {
   const { token } = req.query;
 
   if (!token) {
-    return res.status(400).json({ message: "Invitation token is required." });
+    return res.status(400).json({ title: "Token requerido", message: "El token de invitación es requerido." });
   }
 
   try {
     const decoded = emailUtils.verifyToken(token);
 
     if (!decoded.invited || decoded.role !== "employee") {
-      return res.status(400).json({ message: "Invalid invitation token." });
+      return res.status(400).json({ title: "Token inválido", message: "El token de invitación no es válido." });
     }
 
     return res.status(200).json({
@@ -136,11 +141,12 @@ inviteEmployeeController.validateInvitation = async (req, res) => {
       },
     });
   } catch (error) {
+    // Si el token venció, se lo decimos explícito para que pida uno nuevo
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "This invitation has expired. Ask an administrator to send a new one." });
+      return res.status(401).json({ title: "Invitación expirada", message: "Esta invitación ya venció. Pide a un administrador que envíe una nueva." });
     }
     console.error("inviteEmployeeController.validateInvitation:", error);
-    return res.status(400).json({ message: "Invalid or corrupted invitation token." });
+    return res.status(400).json({ title: "Token inválido", message: "El token de invitación no es válido o está dañado." });
   }
 };
 
@@ -160,21 +166,22 @@ inviteEmployeeController.validateInvitation = async (req, res) => {
 inviteEmployeeController.acceptInvitation = async (req, res) => {
   const { token, password } = req.body;
 
+  // La contraseña la escribe el empleado en este paso, así que se valida aquí
   const passwordValidation = utils.validatePassword(password);
   if (!passwordValidation.valid) {
-    return res.status(400).json({ message: passwordValidation.message });
+    return res.status(400).json({ title: "Contraseña inválida", message: passwordValidation.message });
   }
 
   try {
     const decoded = emailUtils.verifyToken(token);
 
     if (!decoded.invited || decoded.role !== "employee") {
-      return res.status(400).json({ message: "Invalid invitation token." });
+      return res.status(400).json({ title: "Token inválido", message: "El token de invitación no es válido." });
     }
 
-    const exists = await employeeModel.findOne({ "loginInfo.email": decoded.email });
+    const exists = await EmployeeModel.findOne({ "loginInfo.email": decoded.email });
     if (exists) {
-      return res.status(409).json({ message: "An employee with this email already exists." });
+      return res.status(409).json({ title: "Empleado ya existe", message: "Ya existe un empleado registrado con este correo electrónico." });
     }
 
     const bcryptjs = (await import("bcryptjs")).default;
@@ -185,11 +192,11 @@ inviteEmployeeController.acceptInvitation = async (req, res) => {
     // y la imagen quedará en null sin lanzar ningún error.
     const imageUrl = req.file ? req.file.path : null;
 
-    const newEmployee = new employeeModel({
+    const newEmployee = new EmployeeModel({
       personalInfo: {
         name: decoded.personalInfo.name,
         lastname: decoded.personalInfo.lastname,
-        DUI_NIT: decoded.personalInfo.DUI_NIT,
+        duiNit: decoded.personalInfo.duiNit,
         address: decoded.personalInfo.address,
         phone: decoded.personalInfo.phone,
         image: imageUrl,
@@ -239,13 +246,13 @@ inviteEmployeeController.acceptInvitation = async (req, res) => {
       },
     });
 
-    return res.status(201).json({ message: "Employee account created successfully." });
+    return res.status(201).json({ title: "Cuenta creada", message: "La cuenta del empleado se creó correctamente." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "This invitation has expired. Ask an administrator to send a new one." });
+      return res.status(401).json({ title: "Invitación expirada", message: "Esta invitación ya venció. Pide a un administrador que envíe una nueva." });
     }
     console.error("inviteEmployeeController.acceptInvitation:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "No se pudo crear la cuenta del empleado." });
   }
 };
 

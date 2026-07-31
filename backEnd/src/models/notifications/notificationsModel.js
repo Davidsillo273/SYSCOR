@@ -1,4 +1,3 @@
-// Importamos mongoose para definir la estructura de las notificaciones del sistema
 import mongoose, { Schema, model } from "mongoose";
 
 // Cada documento representa UN movimiento ocurrido en el sistema

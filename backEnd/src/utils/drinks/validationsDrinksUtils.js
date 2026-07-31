@@ -66,6 +66,20 @@ const validateCategory = (category) => {
 // La imagen es opcional: si no se manda, el frontend usa un placeholder
 const validateImage = () => ({ valid: true });
 
+// La receta solo tiene sentido (y es obligatoria) para bebidas 'casa'
+const validateRecipe = (recipe, category) => {
+  if (category !== "casa") return { valid: true };
+
+  if (!Array.isArray(recipe) || recipe.length === 0) {
+    return {
+      valid: false,
+      message: "La receta es obligatoria para bebidas de casa: agrega al menos un ingrediente.",
+    };
+  }
+
+  return { valid: true };
+};
+
 export default {
   validateName,
   validatePrice,
@@ -73,4 +87,5 @@ export default {
   validateStatus,
   validateCategory,
   validateImage,
+  validateRecipe,
 };

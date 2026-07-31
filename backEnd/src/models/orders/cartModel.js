@@ -1,10 +1,9 @@
-// Importamos mongoose para definir la estructura de nuestro carrito de compras
 import mongoose, { Schema, model } from "mongoose";
 
 // Definimos la estructura que tendrá cada Carrito (Orden) en la base de datos
 const cartSchema = new Schema({
     // Identificador del cliente al que pertenece este carrito
-    idCustomer: {
+    customerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Customer", // Hace referencia al modelo de Cliente
         required: true
@@ -61,6 +60,12 @@ const cartSchema = new Schema({
     // Estado actual del carrito (ej: pendiente, pagado, cancelado)
     status: {
         type: String
+    },
+    // true cuando ya se descontó el inventario de esta orden (combos->platillos
+    // y extras). Evita que un ciclo cooking->ready->cooking descuente dos veces.
+    inventoryDeducted: {
+        type: Boolean,
+        default: false
     }
 }, {
     // Guarda automáticamente la fecha de creación y última modificación

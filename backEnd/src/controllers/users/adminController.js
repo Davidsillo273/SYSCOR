@@ -1,5 +1,5 @@
 // Importamos el modelo y utilidades para poder buscar y validar administradores
-import adminModel from "../../models/users/adminModel.js";
+import AdminModel from "../../models/users/adminModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 import cloudinaryUtils from "../../utils/cloudinaryUtils.js";
@@ -9,11 +9,11 @@ const adminController = {};
 // Obtiene la lista de todos los administradores registrados
 adminController.getAdmins = async (req, res) => {
     try {
-        const admins = await crudUtils.searchDocuments(adminModel, req.query);
+        const admins = await crudUtils.searchDocuments(AdminModel, req.query);
         return res.status(200).json(admins);
     } catch (error) {
-        console.error("Error getting admins:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("adminController.getAdmins:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "No se pudo obtener la lista de administradores." });
     }
 };
 
@@ -25,11 +25,11 @@ adminController.updateAdmin = async (req, res) => {
         const validationsToRun = [];
 
         if (name !== undefined) {
-            validationsToRun.push(() => validationUtils.validateName(name, "Name"));
+            validationsToRun.push(() => validationUtils.validateName(name, "El nombre"));
             updateData["personalInfo.name"] = name.trim();
         }
         if (lastname !== undefined) {
-            validationsToRun.push(() => validationUtils.validateName(lastname, "Lastname"));
+            validationsToRun.push(() => validationUtils.validateName(lastname, "El apellido"));
             updateData["personalInfo.lastname"] = lastname.trim();
         }
 
@@ -42,34 +42,34 @@ adminController.updateAdmin = async (req, res) => {
 
         if (validationsToRun.length > 0) {
             const result = validationUtils.runValidations(validationsToRun);
-            if (!result.valid) return res.status(400).json({ message: result.message });
+            if (!result.valid) return res.status(400).json({ title: "Datos inválidos", message: result.message });
         }
 
         // Si viene una foto nueva, guardamos la URL de la anterior para
         // borrarla de Cloudinary después de que la actualización tenga éxito
         let previousImage = null;
         if (req.file) {
-            const currentAdmin = await adminModel.findById(req.params.id).select("personalInfo.image");
+            const currentAdmin = await AdminModel.findById(req.params.id).select("personalInfo.image");
             previousImage = currentAdmin?.personalInfo?.image || null;
         }
 
-        const updatedAdmin = await adminModel.findByIdAndUpdate(
+        const updatedAdmin = await AdminModel.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-loginInfo.password");
 
-        if (!updatedAdmin) return res.status(404).json({ message: "Admin not found" });
+        if (!updatedAdmin) return res.status(404).json({ title: "Administrador no encontrado", message: "No se encontró el administrador solicitado." });
 
         // La imagen anterior ya no la usa nadie, la eliminamos de Cloudinary
         if (previousImage) {
             await cloudinaryUtils.deletePreviousImage(previousImage);
         }
 
-        return res.status(200).json({ message: "Admin updated successfully", data: updatedAdmin });
+        return res.status(200).json({ title: "Administrador actualizado", message: "Los datos se actualizaron correctamente.", data: updatedAdmin });
     } catch (error) {
-        console.error("Error updating admin:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("adminController.updateAdmin:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "No se pudo actualizar el administrador." });
     }
 };
 

@@ -1,14 +1,26 @@
 // Importamos el modelo de los platillos, Cloudinary para imágenes y validaciones
-import saucersModel from "../../models/menu/saucersModel.js";
+import SaucersModel from "../../models/menu/saucersModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsSaucers from "../../utils/saucers/validationsSaucersUtils.js";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
-import combosModel from "../../models/menu/combosModel.js";
-import cartModel from "../../models/orders/cartModel.js";
+import CartModel from "../../models/orders/cartModel.js";
+import { findByNameInsensitive } from "../../utils/common/duplicateNameUtils.js";
+import { cascadeDisableCombos } from "../../utils/menu/cascadeUtils.js";
 
 // Objeto para agrupar todas las funciones de los platillos
 const saucersController = {};
+
+// Busca si ya existe un platillo con ese nombre (sugerencia, no bloqueo)
+saucersController.checkName = async (req, res) => {
+  try {
+    const existing = await findByNameInsensitive(SaucersModel, req.query.name);
+    return res.status(200).json({ existing: existing || null });
+  } catch (error) {
+    console.error("saucersController.checkName:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
+  }
+};
 
 // La receta llega como FormData, así que viaja como string JSON
 const parseRecipe = (rawRecipe) => {
@@ -22,56 +34,26 @@ const parseRecipe = (rawRecipe) => {
   }
 };
 
-// Si un platillo deja de estar activo, ningún combo que lo incluya puede
-// seguir vendiéndose: se deshabilitan automáticamente. No se reactivan solos
-// al reactivar el platillo, el admin debe revisarlos.
-const cascadeDisableCombos = async (req, saucerId, saucerName) => {
-  try {
-    const affectedCombos = await combosModel.find({ "saucers.saucerId": saucerId, status: "disponible" });
-    if (affectedCombos.length === 0) return;
-
-    await combosModel.updateMany(
-      { "saucers.saucerId": saucerId, status: "disponible" },
-      { status: "no disponible" }
-    );
-
-    for (const combo of affectedCombos) {
-      await notificationUtils.createNotification({
-        req,
-        category: "menu",
-        action: "status_changed",
-        title: "Combo deshabilitado automáticamente",
-        message: `El combo ${combo.name} se deshabilitó porque el platillo ${saucerName} ya no está activo`,
-        icon: "shopping-bag",
-        severity: "warning",
-        entity: { model: "Combos", id: combo._id, label: combo.name },
-      });
-    }
-  } catch (error) {
-    console.error("saucersController.cascadeDisableCombos:", error);
-  }
-};
-
 // Obtiene todos los platillos sin importar su estado
 saucersController.getAllSaucers = async (req, res) => {
   try {
-    const saucers = await saucersModel.find();
+    const saucers = await SaucersModel.find().sort({ createdAt: -1 });
     return res.status(200).json(saucers);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("saucersController.getAllSaucers:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Obtiene solo los platillos que están activos (disponibles para venta)
 saucersController.getActiveSaucers = async (req, res) => {
   try {
-    const saucers = await saucersModel.find({ status: "Activo" });
+    const saucers = await SaucersModel.find({ status: "Activo" });
 
     return res.status(200).json(saucers);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("saucersController.getActiveSaucers:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -82,7 +64,7 @@ saucersController.getBestSellers = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 5;
 
-    const ranking = await cartModel.aggregate([
+    const ranking = await CartModel.aggregate([
       { $unwind: "$details" },
       { $unwind: "$details.combos" },
       {
@@ -117,16 +99,17 @@ saucersController.getBestSellers = async (req, res) => {
 
     return res.status(200).json(ranking);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("saucersController.getBestSellers:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Crea un nuevo platillo en el menú (imagen y receta opcionales)
 saucersController.insertSaucer = async (req, res) => {
   try {
-    const { name, category, price, status, isBirria } = req.body;
+    const { name, category, price, status, description, subcategory, quantity } = req.body;
     const recipe = parseRecipe(req.body.recipe);
+    const taco = category === "Tacos";
 
     let validation = validationsSaucers.validateName(name);
     if (!validation.valid) {
@@ -143,6 +126,16 @@ saucersController.insertSaucer = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    validation = validationsSaucers.validateTacoQuantity(category, quantity);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsSaucers.validateRecipe(recipe);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     // Nace 'Activo' por default: el admin no crea algo pensado para estar deshabilitado
     const finalStatus = status || "Activo";
     validation = validationsSaucers.validateStatus(finalStatus);
@@ -150,16 +143,18 @@ saucersController.insertSaucer = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    const birriaApplies = ["Burritos", "Tortas", "Tacos"].includes(category);
+    const subcategoryApplies = !["Sopas", "Especiales"].includes(category);
 
-    const newSaucer = new saucersModel({
+    const newSaucer = new SaucersModel({
       name,
       category,
-      isBirria: birriaApplies ? Boolean(isBirria === "true" || isBirria === true) : false,
+      description: description || "",
+      subcategory: subcategoryApplies ? (subcategory || "") : "",
+      quantity: taco ? Number(quantity) : null,
       price,
       status: finalStatus,
       recipe,
-      ...(req.file ? { image: req.file.path, public_id: req.file.filename } : {}),
+      ...(req.file ? { image: req.file.path, publicId: req.file.filename } : {}),
     });
 
     await newSaucer.save();
@@ -176,27 +171,27 @@ saucersController.insertSaucer = async (req, res) => {
       entity: { model: "Saucers", id: newSaucer._id, label: newSaucer.name },
     });
 
-    return res.status(200).json({message: "Saucer saved successfully",});
+    return res.status(200).json({title: "Platillo agregado", message: "El platillo se guardó correctamente.",});
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({message: "Internal server error"});
+    console.error("saucersController.insertSaucer:", error);
+    return res.status(500).json({title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde."});
   }
 };
 
 // Elimina un platillo del menú y borra la imagen asociada de Cloudinary
 saucersController.deleteSaucer = async (req, res) => {
   try {
-    const saucerFound = await saucersModel.findById(req.params.id);
+    const saucerFound = await SaucersModel.findById(req.params.id);
     if (!saucerFound) {
-      return res.status(404).json({ message: "Saucer not found" });
+      return res.status(404).json({ title: "Platillo no encontrado", message: "No se encontró el platillo solicitado." });
     }
 
-    // Solo intenta borrar la imagen si existe public_id
-    if (saucerFound.public_id) {
-      await cloudinary.uploader.destroy(saucerFound.public_id);
+    // Solo intenta borrar la imagen si existe publicId
+    if (saucerFound.publicId) {
+      await cloudinary.uploader.destroy(saucerFound.publicId);
     }
 
-    await saucersModel.findByIdAndDelete(req.params.id);
+    await SaucersModel.findByIdAndDelete(req.params.id);
 
     await notificationUtils.createNotification({
       req,
@@ -209,18 +204,19 @@ saucersController.deleteSaucer = async (req, res) => {
       entity: { model: "Saucers", id: saucerFound._id, label: saucerFound.name },
     });
 
-    return res.status(200).json({ message: "Saucer deleted successfully" });
+    return res.status(200).json({ title: "Platillo eliminado", message: "El platillo se eliminó correctamente." });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("saucersController.deleteSaucer:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Actualiza un platillo (nombre, categoría, precio, estado, receta y/o imagen)
 saucersController.updateSaucer = async (req, res) => {
   try {
-    const { name, category, price, status, isBirria } = req.body;
+    const { name, category, price, status, description, subcategory, quantity } = req.body;
     const recipe = parseRecipe(req.body.recipe);
+    const taco = category === "Tacos";
 
     let validation = validationsSaucers.validateName(name);
     if (!validation.valid) {
@@ -237,19 +233,31 @@ saucersController.updateSaucer = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    validation = validationsSaucers.validateTacoQuantity(category, quantity);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsSaucers.validateRecipe(recipe);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     validation = validationsSaucers.validateStatus(status);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
-    const saucerFound = await saucersModel.findById(req.params.id);
+    const saucerFound = await SaucersModel.findById(req.params.id);
 
-    const birriaApplies = ["Burritos", "Tortas", "Tacos"].includes(category);
+    const subcategoryApplies = !["Sopas", "Especiales"].includes(category);
 
     const updatedData = {
       name,
       category,
-      isBirria: birriaApplies ? Boolean(isBirria === "true" || isBirria === true) : false,
+      description: description || "",
+      subcategory: subcategoryApplies ? (subcategory || "") : "",
+      quantity: taco ? Number(quantity) : null,
       price,
       status,
       recipe,
@@ -257,15 +265,15 @@ saucersController.updateSaucer = async (req, res) => {
 
     // Si hay una nueva imagen, borramos la antigua y registramos la nueva
     if (req.file) {
-      if (saucerFound?.public_id) {
-        await cloudinary.uploader.destroy(saucerFound.public_id);
+      if (saucerFound?.publicId) {
+        await cloudinary.uploader.destroy(saucerFound.publicId);
       }
 
       updatedData.image = req.file.path;
-      updatedData.public_id = req.file.filename;
+      updatedData.publicId = req.file.filename;
     }
 
-    await saucersModel.findByIdAndUpdate(req.params.id, updatedData, {
+    await SaucersModel.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
     });
 
@@ -290,10 +298,10 @@ saucersController.updateSaucer = async (req, res) => {
       await cascadeDisableCombos(req, req.params.id, name);
     }
 
-    return res.status(200).json({message: "Saucer updated successfully",});
+    return res.status(200).json({title: "Platillo actualizado", message: "El platillo se actualizó correctamente.",});
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    console.error("saucersController.updateSaucer:", error);
+    return res.status(500).json({title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde.",});
   }
 };
 

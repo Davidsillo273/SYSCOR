@@ -1,16 +1,16 @@
 // Importamos el modelo de notificaciones, los modelos de usuarios (para saber
 // quién hizo cada movimiento) y los ajustes (para respetar qué categorías están activas)
-import notificationModel from "../../models/notifications/notificationsModel.js";
-import adminModel from "../../models/users/adminModel.js";
-import employeeModel from "../../models/users/employeeModel.js";
-import customerModel from "../../models/users/customerModel.js";
+import NotificationModel from "../../models/notifications/notificationsModel.js";
+import AdminModel from "../../models/users/adminModel.js";
+import EmployeeModel from "../../models/users/employeeModel.js";
+import CustomerModel from "../../models/users/customerModel.js";
 import settingsUtils from "../settings/settingsUtils.js";
 
 // Mismo mapeo que usa authMeController: según el rol sabemos en qué colección buscar al usuario
 const MODELS_BY_ROLE = {
-    admin: adminModel,
-    employee: employeeModel,
-    customer: customerModel,
+    admin: AdminModel,
+    employee: EmployeeModel,
+    customer: CustomerModel,
 };
 
 // Quién puede ver cada tipo de movimiento.
@@ -120,7 +120,7 @@ const createNotification = async ({
 
         const finalMessage = typeof message === "function" ? message(actor) : message;
 
-        const newNotification = new notificationModel({
+        const newNotification = new NotificationModel({
             category,
             action,
             title,

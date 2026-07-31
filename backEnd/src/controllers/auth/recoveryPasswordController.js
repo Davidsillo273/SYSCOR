@@ -1,9 +1,9 @@
 // Importamos bcrypt para encriptar las nuevas contraseñas y los modelos de usuarios
 import bcrypt from "bcryptjs";
 
-import Admin from "../../models/users/adminModel.js";
-import Employees from "../../models/users/employeeModel.js";
-import Customers from "../../models/users/customerModel.js";
+import AdminModel from "../../models/users/adminModel.js";
+import EmployeeModel from "../../models/users/employeeModel.js";
+import CustomerModel from "../../models/users/customerModel.js";
 
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 import emailUtils from "../../utils/auth/emailUtils.js";
@@ -14,9 +14,9 @@ import recoveryResponse from "../../utils/auth/recoveryPasswordUtils.js";
 // Mongoose correspondiente, para que este único controlador pueda manejar
 // la recuperación de contraseña de los tres roles sin duplicar lógica
 const ROLES_MODELS = {
-    admin: Admin,
-    employee: Employees,
-    customer: Customers,
+    admin: AdminModel,
+    employee: EmployeeModel,
+    customer: CustomerModel,
 };
 
 const recoveryPasswordController = {};
@@ -57,7 +57,7 @@ recoveryPasswordController.requestCode = async (req, res) => {
 
         await emailUtils.sendEmail(
             email,
-            "SYSCOR - Password Recovery",
+            "SYSCOR - Recuperación de contraseña",
             emailUtils.HTMLRecoveryEmail(code)
         );
 

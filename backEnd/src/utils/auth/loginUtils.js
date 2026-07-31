@@ -68,7 +68,7 @@ const processLogin = async (Model, email, password, role) => {
 
     const token = jwt.sign(
         tokenPayload,
-        process.env.JWT_SECRET || config.JWT.secret,
+        process.env.JWT_SECRET || config.jwt.secret,
         { expiresIn: "30d" }
     );
 

@@ -9,7 +9,7 @@ router.route("/")
 
 router.route("/:id")
   .get(cartController.getCartById)
-  .put(cartController.updateCart)
+  .patch(cartController.updateCart)
   .delete(cartController.deleteCart);
 
 export default router;

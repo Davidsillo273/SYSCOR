@@ -20,7 +20,7 @@ const validateNIT = (nit) => {
   return { valid: true };
 };
 
-const validateDUI_NIT = (value) => {
+const validateDuiNit = (value) => {
   const duiResult = validateDUI(value);
   if (duiResult.valid) return { valid: true };
   const nitResult = validateNIT(value);
@@ -52,7 +52,7 @@ const validateEmployeeType = (type) => {
 export default {
   validateDUI,
   validateNIT,
-  validateDUI_NIT,
+  validateDuiNit,
   validateSalary,
   validateEmployeeType,
 };

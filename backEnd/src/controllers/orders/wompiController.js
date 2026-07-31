@@ -1,11 +1,11 @@
 // Importamos configuración global y el modelo del carrito
 import { config } from "../../../config.js";
-import cartModel from "../../models/orders/cartModel.js";
+import CartModel from "../../models/orders/cartModel.js";
 
 const wompiController = {};
 
 // Función para conectarnos con Wompi (pasarela de pagos) y obtener un token de acceso
-wompiController.generarToken = async (req, res) => {
+wompiController.generateToken = async (req, res) => {
     try {
         // Hacemos una petición a los servidores de Wompi enviando nuestras credenciales
         const response = await fetch("https://id.wompi.sv/connect/token", {
@@ -14,10 +14,10 @@ wompiController.generarToken = async (req, res) => {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: new URLSearchParams({
-                grant_type: config.wompi.grant_type,
+                grant_type: config.wompi.grantType,
                 audience: config.wompi.audience,
-                client_id: config.wompi.client_id,
-                client_secret: config.wompi.client_secret,
+                client_id: config.wompi.clientId,
+                client_secret: config.wompi.clientSecret,
             }),
         });
 
@@ -26,7 +26,8 @@ wompiController.generarToken = async (req, res) => {
         // Si Wompi nos rechaza, devolvemos el error al usuario
         if (!response.ok) {
             return res.status(response.status).json({
-                message: "Error al generar el token de acceso a Wompi",
+                title: "Error de pago",
+                message: "No se pudo generar el token de acceso a Wompi.",
                 error: data,
             });
         }
@@ -34,8 +35,8 @@ wompiController.generarToken = async (req, res) => {
         // Si todo va bien, entregamos el token generado
         return res.status(200).json(data);
     } catch (error) {
-        console.error("Wompi Token Error:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("wompiController.generateToken:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al generar el token de pago." });
     }
 };
 
@@ -46,9 +47,9 @@ wompiController.paymentTest = async (req, res) => {
         const { token, cardToken, cartId } = req.body;
 
         // Buscamos el carrito en la base de datos
-        const cartFound = await cartModel.findById(cartId).populate("idCustomer");
+        const cartFound = await CartModel.findById(cartId).populate("customerId");
         if (!cartFound) {
-            return res.status(404).json({ message: "Carrito no encontrado" });
+            return res.status(404).json({ title: "Carrito no encontrado", message: "No se encontró el carrito solicitado." });
         }
 
         // Le enviamos a Wompi los datos del pago (monto, correo del cliente y token de la tarjeta)
@@ -60,7 +61,7 @@ wompiController.paymentTest = async (req, res) => {
             },
             body: JSON.stringify({
                 monto: cartFound.total,
-                email: cartFound.idCustomer?.loginInfo?.email || "customer@syscor.com",
+                email: cartFound.customerId?.loginInfo?.email || "customer@syscor.com",
                 configuracion: {
                     urls: {
                         respuesta: `${config.appUrl}/payment/response`,
@@ -84,12 +85,13 @@ wompiController.paymentTest = async (req, res) => {
         await cartFound.save();
 
         return res.status(200).json({
-            message: "Pago procesado exitosamente",
+            title: "Pago exitoso",
+            message: "El pago se procesó correctamente.",
             data: result,
         });
     } catch (error) {
-        console.error("Wompi Payment Error:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("wompiController.paymentTest:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al procesar el pago." });
     }
 };
 

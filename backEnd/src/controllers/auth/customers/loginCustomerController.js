@@ -1,5 +1,5 @@
 // Importamos el modelo de Cliente y la herramienta para procesar los inicios de sesión
-import customerModel from "../../../models/users/customerModel.js";
+import CustomerModel from "../../../models/users/customerModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 
@@ -13,22 +13,22 @@ loginCustomerController.loginCustomer = async (req, res) => {
 
         // Comprobamos los datos usando nuestra función centralizada de inicio de sesión
         // Indicamos claramente que estamos autenticando a un "customer" (cliente)
-        const result = await processLogin(customerModel, email, password, "customer");
+        const result = await processLogin(CustomerModel, email, password, "customer");
 
         // Si hay algún problema (no existe el correo o la clave está mal) devolvemos error
         if (result.error) {
-            return res.status(result.status).json({ message: result.message });
+            return res.status(result.status).json({ title: result.title, message: result.message });
         }
 
         // Si pasó las pruebas, creamos su "llave" (cookie) para que mantenga su sesión abierta
         res.cookie("authCookie", result.token, cookieConfig);
 
         // Respondemos que todo salió perfecto
-        return res.status(200).json({ message: result.message });
+        return res.status(200).json({ title: "Bienvenido", message: result.message });
     } catch (error) {
         // Si el servidor falla por algún motivo, lo registramos
-        console.error("Error in Customer login:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("loginCustomerController.loginCustomer:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al iniciar sesión." });
     }
 };
 

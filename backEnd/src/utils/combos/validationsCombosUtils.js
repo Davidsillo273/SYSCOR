@@ -16,12 +16,46 @@ const validateName = (name) => {
   return { valid: true };
 };
 
-// Ahora un combo puede tener uno o varios platillos
-const validateSaucers = (saucers) => {
+// En modo normal el combo trae uno o varios platillos fijos. En modo
+// selectivo, en cambio, lo que debe traer al menos una opción es
+// selectiveOptions (los platillos fijos no aplican)
+const validateSaucers = (saucers, selective, selectiveOptions) => {
+  if (selective) {
+    if (!Array.isArray(selectiveOptions) || selectiveOptions.length === 0) {
+      return {
+        valid: false,
+        message: "En modo selectivo debes elegir al menos un platillo como opción.",
+      };
+    }
+    return { valid: true };
+  }
+
   if (!Array.isArray(saucers) || saucers.length === 0) {
     return {
       valid: false,
       message: "El combo debe incluir al menos un platillo.",
+    };
+  }
+
+  return { valid: true };
+};
+
+// Cuántas opciones puede elegir el cliente en modo selectivo: al menos 1 y
+// nunca más de las opciones disponibles
+const validateSelectiveMaxPicks = (selective, maxPicks, optionsCount) => {
+  if (!selective) return { valid: true };
+
+  const picks = Number(maxPicks);
+  if (!picks || picks < 1) {
+    return {
+      valid: false,
+      message: "Indica cuántas opciones puede elegir el cliente (mínimo 1).",
+    };
+  }
+  if (picks > optionsCount) {
+    return {
+      valid: false,
+      message: "El cliente no puede elegir más opciones de las que ofreces.",
     };
   }
 
@@ -44,17 +78,6 @@ const validatePrice = (price) => {
     return {
       valid: false,
       message: "El precio es requerido.",
-    };
-  }
-
-  return { valid: true };
-};
-
-const validateQuantity = (quantity) => {
-  if (quantity === undefined || quantity === null || quantity === "") {
-    return {
-      valid: false,
-      message: "La cantidad es requerida.",
     };
   }
 
@@ -89,9 +112,9 @@ const validateImage = () => ({ valid: true });
 export default {
   validateName,
   validateSaucers,
+  validateSelectiveMaxPicks,
   validateCategory,
   validatePrice,
-  validateQuantity,
   validateDescription,
   validateStatus,
   validateImage,

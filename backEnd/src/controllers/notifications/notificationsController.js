@@ -1,5 +1,5 @@
 // Importamos el modelo de notificaciones para consultar y actualizar los avisos del sistema
-import notificationModel from "../../models/notifications/notificationsModel.js";
+import NotificationModel from "../../models/notifications/notificationsModel.js";
 
 const notificationsController = {};
 
@@ -31,12 +31,12 @@ notificationsController.getNotifications = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const [notifications, total, unreadCount] = await Promise.all([
-      notificationModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-      notificationModel.countDocuments(filter),
+      NotificationModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      NotificationModel.countDocuments(filter),
       // El contador de no leídas siempre se calcula sobre TODAS las visibles de
       // los últimos 3 días (no solo las de esta página), para que el número de
       // la campana sea real sin importar en qué página esté el usuario.
-      notificationModel.countDocuments({ audience: role, readBy: { $ne: id }, ...buildDateFilter() }),
+      NotificationModel.countDocuments({ audience: role, readBy: { $ne: id }, ...buildDateFilter() }),
     ]);
 
     return res.status(200).json({
@@ -49,7 +49,7 @@ notificationsController.getNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error("notificationsController.getNotifications:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -59,20 +59,20 @@ notificationsController.markAsRead = async (req, res) => {
   try {
     const { id: userId } = req.user;
 
-    const notification = await notificationModel.findByIdAndUpdate(
+    const notification = await NotificationModel.findByIdAndUpdate(
       req.params.id,
       { $addToSet: { readBy: userId } },
       { new: true }
     );
 
     if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+      return res.status(404).json({ title: "Notificación no encontrada", message: "No se encontró la notificación solicitada." });
     }
 
-    return res.status(200).json({ message: "Notification marked as read", data: notification });
+    return res.status(200).json({ title: "Notificación leída", message: "La notificación se marcó como leída.", data: notification });
   } catch (error) {
     console.error("notificationsController.markAsRead:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -82,34 +82,35 @@ notificationsController.markAllAsRead = async (req, res) => {
   try {
     const { id: userId, role } = req.user;
 
-    const result = await notificationModel.updateMany(
+    const result = await NotificationModel.updateMany(
       { audience: role, readBy: { $ne: userId } },
       { $addToSet: { readBy: userId } }
     );
 
     return res.status(200).json({
-      message: "All notifications marked as read",
+      title: "Notificaciones leídas",
+      message: "Todas las notificaciones se marcaron como leídas.",
       modified: result.modifiedCount,
     });
   } catch (error) {
     console.error("notificationsController.markAllAsRead:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Elimina definitivamente una notificación (solo administradores)
 notificationsController.deleteNotification = async (req, res) => {
   try {
-    const notification = await notificationModel.findByIdAndDelete(req.params.id);
+    const notification = await NotificationModel.findByIdAndDelete(req.params.id);
 
     if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+      return res.status(404).json({ title: "Notificación no encontrada", message: "No se encontró la notificación solicitada." });
     }
 
-    return res.status(200).json({ message: "Notification deleted" });
+    return res.status(200).json({ title: "Notificación eliminada", message: "La notificación se eliminó correctamente." });
   } catch (error) {
     console.error("notificationsController.deleteNotification:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 

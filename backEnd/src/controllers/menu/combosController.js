@@ -1,13 +1,25 @@
 // Importamos el modelo de los combos, Cloudinary para imágenes y validaciones
-import combosModel from "../../models/menu/combosModel.js";
-import cartModel from "../../models/orders/cartModel.js";
+import CombosModel from "../../models/menu/combosModel.js";
+import CartModel from "../../models/orders/cartModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import validationsCombos from "../../utils/combos/validationsCombosUtils.js";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
+import { findByNameInsensitive } from "../../utils/common/duplicateNameUtils.js";
 
 // Objeto para agrupar todas las funciones de los combos
 const combosController = {};
+
+// Busca si ya existe un combo con ese nombre (sugerencia, no bloqueo)
+combosController.checkName = async (req, res) => {
+  try {
+    const existing = await findByNameInsensitive(CombosModel, req.query.name);
+    return res.status(200).json({ existing: existing || null });
+  } catch (error) {
+    console.error("combosController.checkName:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
+  }
+};
 
 // saucers y drinkPolicy llegan como FormData, así que viajan como string JSON
 const parseJsonField = (raw, fallback) => {
@@ -21,17 +33,21 @@ const parseJsonField = (raw, fallback) => {
 };
 
 const populateCombo = (query) =>
-  query.populate("saucers.saucerId").populate("drinkPolicy.thirdPartyDrinkIds");
+  query
+    .populate("saucers.saucerId")
+    .populate("selectiveOptions.saucerId")
+    .populate({ path: "drinkPolicy.drinkSetIds", populate: { path: "drinkIds" } })
+    .populate("drinkPolicy.thirdPartyDrinkIds");
 
 // Obtiene todos los combos y también incluye (populate) los detalles de los platillos y bebidas que lo componen
 combosController.getAllCombos = async (req, res) => {
   try {
-    const combos = await populateCombo(combosModel.find());
+    const combos = await populateCombo(CombosModel.find().sort({ createdAt: -1 }));
 
     return res.status(200).json(combos);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("combosController.getAllCombos:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -39,12 +55,12 @@ combosController.getAllCombos = async (req, res) => {
 // Obtiene solo los combos disponibles para venta, con sus platillos y bebidas
 combosController.getActiveCombos = async (req, res) => {
   try {
-    const combos = await populateCombo(combosModel.find({ status: "disponible" }));
+    const combos = await populateCombo(CombosModel.find({ status: "disponible" }));
 
     return res.status(200).json(combos);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("combosController.getActiveCombos:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -52,16 +68,16 @@ combosController.getActiveCombos = async (req, res) => {
 // Busca un combo específico por su ID y trae todos los detalles (platillos y bebidas)
 combosController.getComboById = async (req, res) => {
   try {
-    const combo = await populateCombo(combosModel.findById(req.params.id));
+    const combo = await populateCombo(CombosModel.findById(req.params.id));
 
     if (!combo) {
-      return res.status(404).json({message: "Combo not found",});
+      return res.status(404).json({title: "Combo no encontrado", message: "No se encontró el combo solicitado.",});
     }
 
     return res.status(200).json(combo);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("combosController.getComboById:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -71,7 +87,7 @@ combosController.getBestSellers = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 5;
 
-    const ranking = await cartModel.aggregate([
+    const ranking = await CartModel.aggregate([
       { $unwind: "$details" },
       { $unwind: "$details.combos" },
       {
@@ -96,17 +112,19 @@ combosController.getBestSellers = async (req, res) => {
 
     return res.status(200).json(ranking);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("combosController.getBestSellers:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Crea un nuevo combo en la base de datos (imagen opcional)
 combosController.insertCombo = async (req, res) => {
   try {
-    const { name, price, quantity, description, status, category } = req.body;
+    const { name, price, description, status, category, selective, selectiveMaxPicks } = req.body;
     const saucers = parseJsonField(req.body.saucers, []);
+    const selectiveOptions = parseJsonField(req.body.selectiveOptions, []);
     const drinkPolicy = parseJsonField(req.body.drinkPolicy, {});
+    const isSelective = selective === "true" || selective === true;
 
     let validation = validationsCombos.validateName(name);
     if (!validation.valid) {
@@ -118,17 +136,17 @@ combosController.insertCombo = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsCombos.validateSaucers(saucers);
+    validation = validationsCombos.validateSaucers(saucers, isSelective, selectiveOptions);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsCombos.validateSelectiveMaxPicks(isSelective, selectiveMaxPicks, selectiveOptions.length);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
     validation = validationsCombos.validatePrice(price);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
-
-    validation = validationsCombos.validateQuantity(quantity);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
@@ -145,16 +163,18 @@ combosController.insertCombo = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    const newCombo = new combosModel({
+    const newCombo = new CombosModel({
       name,
       category,
-      saucers,
+      saucers: isSelective ? [] : saucers,
+      selective: isSelective,
+      selectiveOptions: isSelective ? selectiveOptions : [],
+      selectiveMaxPicks: isSelective ? Number(selectiveMaxPicks) : undefined,
       drinkPolicy,
       price,
-      quantity,
       description,
       status: finalStatus,
-      ...(req.file ? { image: req.file.path, public_id: req.file.filename } : {}),
+      ...(req.file ? { image: req.file.path, publicId: req.file.filename } : {}),
     });
 
     await newCombo.save();
@@ -172,30 +192,30 @@ combosController.insertCombo = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: "Combo saved successfully",
+      title: "Combo agregado", message: "El combo se guardó correctamente.",
       newCombo,
     });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({message: "Internal server error"});
+    console.error("combosController.insertCombo:", error);
+    return res.status(500).json({title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde."});
   }
 };
 
 // Elimina un combo y su imagen alojada en Cloudinary
 combosController.deleteCombo = async (req, res) => {
   try {
-    const comboFound = await combosModel.findById(req.params.id);
+    const comboFound = await CombosModel.findById(req.params.id);
 
     if (!comboFound) {
-      return res.status(404).json({ message: "Combo not found" });
+      return res.status(404).json({ title: "Combo no encontrado", message: "No se encontró el combo solicitado." });
     }
 
-    // Solo eliminar la imagen si existe un public_id
-    if (comboFound.public_id) {
-      await cloudinary.uploader.destroy(comboFound.public_id);
+    // Solo eliminar la imagen si existe un publicId
+    if (comboFound.publicId) {
+      await cloudinary.uploader.destroy(comboFound.publicId);
     }
 
-    await combosModel.findByIdAndDelete(req.params.id);
+    await CombosModel.findByIdAndDelete(req.params.id);
 
     await notificationUtils.createNotification({
       req,
@@ -208,19 +228,21 @@ combosController.deleteCombo = async (req, res) => {
       entity: { model: "Combos", id: comboFound._id, label: comboFound.name },
     });
 
-    return res.status(200).json({ message: "Combo deleted successfully" });
+    return res.status(200).json({ title: "Combo eliminado", message: "El combo se eliminó correctamente." });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("combosController.deleteCombo:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Actualiza un combo (detalles, platillos/bebidas permitidas, precio, estado y/o imagen)
 combosController.updateCombo = async (req, res) => {
   try {
-    const { name, price, quantity, description, status, category } = req.body;
+    const { name, price, description, status, category, selective, selectiveMaxPicks } = req.body;
     const saucers = parseJsonField(req.body.saucers, []);
+    const selectiveOptions = parseJsonField(req.body.selectiveOptions, []);
     const drinkPolicy = parseJsonField(req.body.drinkPolicy, {});
+    const isSelective = selective === "true" || selective === true;
 
     let validation = validationsCombos.validateName(name);
     if (!validation.valid) {
@@ -232,17 +254,17 @@ combosController.updateCombo = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    validation = validationsCombos.validateSaucers(saucers);
+    validation = validationsCombos.validateSaucers(saucers, isSelective, selectiveOptions);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
+    validation = validationsCombos.validateSelectiveMaxPicks(isSelective, selectiveMaxPicks, selectiveOptions.length);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
 
     validation = validationsCombos.validatePrice(price);
-    if (!validation.valid) {
-      return res.status(400).json({message: validation.message,});
-    }
-
-    validation = validationsCombos.validateQuantity(quantity);
     if (!validation.valid) {
       return res.status(400).json({message: validation.message,});
     }
@@ -257,34 +279,36 @@ combosController.updateCombo = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
-    const comboFound = await combosModel.findById(req.params.id);
+    const comboFound = await CombosModel.findById(req.params.id);
 
     if (!comboFound) {
-      return res.status(404).json({message: "Combo not found",});
+      return res.status(404).json({title: "Combo no encontrado", message: "No se encontró el combo solicitado.",});
     }
 
     const updatedData = {
       name,
       category,
-      saucers,
+      saucers: isSelective ? [] : saucers,
+      selective: isSelective,
+      selectiveOptions: isSelective ? selectiveOptions : [],
+      selectiveMaxPicks: isSelective ? Number(selectiveMaxPicks) : null,
       drinkPolicy,
       price,
-      quantity,
       description,
       status,
     };
 
     // Si nos envían una nueva imagen, eliminamos la vieja de Cloudinary y guardamos la nueva
     if (req.file) {
-      if (comboFound.public_id) {
-        await cloudinary.uploader.destroy(comboFound.public_id);
+      if (comboFound.publicId) {
+        await cloudinary.uploader.destroy(comboFound.publicId);
       }
 
       updatedData.image = req.file.path;
-      updatedData.public_id = req.file.filename;
+      updatedData.publicId = req.file.filename;
     }
 
-    const updatedCombo = await combosModel.findByIdAndUpdate(
+    const updatedCombo = await CombosModel.findByIdAndUpdate(
       req.params.id,
       updatedData,
       { new: true }
@@ -307,12 +331,12 @@ combosController.updateCombo = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: "Combo updated successfully",
+      title: "Combo actualizado", message: "El combo se actualizó correctamente.",
       updatedCombo,
     });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({message: "Internal server error",});
+    console.error("combosController.updateCombo:", error);
+    return res.status(500).json({title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde.",});
   }
 };
 
