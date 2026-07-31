@@ -2,6 +2,7 @@ const tablesController = {};
 
 // Importamos el modelo de las mesas para interactuar con la base de datos
 import TablesModel from "../../models/tables/tablesModel.js";
+import Order from "../../models/orders/orderModel.js";
 // Utilidad para registrar los movimientos como notificaciones del sistema
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
@@ -80,34 +81,41 @@ tablesController.deleteTable = async (req, res) => {
 // Actualiza los datos de una mesa (por ejemplo, para cambiarla de libre a ocupada)
 tablesController.updateTable = async (req, res) => {
   try {
-    let { number, status } = req.body;
+    const { number, status } = req.body;
 
-    // Guardamos el estado anterior para saber si la mesa cambió de disponible a ocupada
-    const previousTable = await TablesModel.findById(req.params.id).select("status");
-
-    // Buscamos la mesa por su ID y le aplicamos los nuevos datos
-    const tableUpdated = await TablesModel.findByIdAndUpdate(
-      req.params.id,
-      {
-        number,
-        status,
-      },
-      { new: true } // Devuelve la versión más actualizada de la mesa
-    );
-
-    if (!tableUpdated) {
-      return res.status(404).json({ title: "Mesa no encontrada", message: "No se encontró la mesa solicitada." });
+    // Validar que el estado sea uno de los permitidos
+    const validStatuses = ['libre', 'ocupada', 'limpieza', 'reservada'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Estado no válido" });
     }
 
-    const statusChanged = status !== undefined && previousTable?.status !== status;
+    const previousTable = await TablesModel.findById(req.params.id).select("status");
+    if (!previousTable) {
+      return res.status(404).json({ message: "Mesa no encontrada" });
+    }
 
+    const tableUpdated = await TablesModel.findByIdAndUpdate(
+      req.params.id,
+      { number, status },
+      { new: true }
+    );
+
+    // Si la mesa pasa a 'libre' o 'limpieza', cancelar todas las órdenes activas
+    if (status && ['libre', 'limpieza'].includes(status) && previousTable.status !== status) {
+      await Order.updateMany(
+        { table: tableUpdated._id, status: { $in: ['pending', 'preparing', 'ready'] } },
+        { $set: { status: 'cancelled' } }
+      );
+    }
+
+    // Notificación (tu lógica existente)
     await notificationUtils.createNotification({
       req,
       category: "tables",
-      action: statusChanged ? "status_changed" : "updated",
-      title: statusChanged ? "Mesa cambió de estado" : "Mesa actualizada",
+      action: status && previousTable.status !== status ? "status_changed" : "updated",
+      title: status ? "Mesa cambió de estado" : "Mesa actualizada",
       message: (actor) =>
-        statusChanged
+        status
           ? `${actor.name} cambió la Mesa ${tableUpdated.number} a ${tableUpdated.status}`
           : `${actor.name} actualizó los datos de la Mesa ${tableUpdated.number}`,
       icon: "chair",
@@ -115,10 +123,10 @@ tablesController.updateTable = async (req, res) => {
       entity: { model: "Tables", id: tableUpdated._id, label: `Mesa ${tableUpdated.number}` },
     });
 
-    return res.status(200).json({ title: "Mesa actualizada", message: "La mesa se actualizó correctamente." });
+    return res.status(200).json({ message: "Mesa actualizada", data: tableUpdated });
   } catch (error) {
-    console.log("error found " + error);
-    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
+    console.error("tablesController.updateTable:", error);
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
