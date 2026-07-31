@@ -16,6 +16,10 @@ import notificationsRoutes from "../notifications/notificationsRoutes.js";
 import settingsRoutes from "../settings/settingsRoutes.js";
 import aiRoutes from "../ai/aiRoutes.js";
 import saucerChatRoutes from "../chat/saucerChatRoutes.js";
+import orderRoutes from "../orders/orderRoutes.js";
+import kitchenRoutes from "../orders/kitchenRoutes.js";
+
+
 
 
 // Aquí importamos todas las rutas de cada módulo
@@ -53,6 +57,8 @@ router.use("/menu/drink-sets", drinkSetsRouters);
 
 // Pedidos: carritos y pagos viven bajo /orders
 router.use("/orders/carts", cartRoutes);
+router.use("/orders", orderRoutes);
+router.use("/kitchen", kitchenRoutes);
 router.use("/orders/wompi", wompiRoutes);
 
 // Usuarios administrativos: admins, empleados y clientes viven bajo /users
