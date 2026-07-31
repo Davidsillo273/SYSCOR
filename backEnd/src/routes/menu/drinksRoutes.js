@@ -15,9 +15,12 @@ router.get("/active", validateAuthCookie(["customer", "admin"]), drinksControlle
 // Ranking de bebidas más vendidas
 router.get("/best-sellers", drinksController.getBestSellers);
 
+// Revisa si ya existe una bebida con ese nombre (sugerencia, no bloqueo)
+router.get("/check-name", drinksController.checkName);
+
 router
   .route("/:id")
-  .put(upload.single("image"), drinksController.updateDrink)
+  .patch(upload.single("image"), drinksController.updateDrink)
   .delete(drinksController.deleteDrink);
 
 export default router;

@@ -1,4 +1,3 @@
-// Importamos mongoose para definir los ajustes generales del sistema
 import { Schema, model } from "mongoose";
 
 // Este modelo guarda UN SOLO documento con la configuración del restaurante.

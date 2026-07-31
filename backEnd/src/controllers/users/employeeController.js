@@ -1,5 +1,5 @@
 // Importamos el modelo y las utilidades para consultar y validar la información de empleados
-import employeeModel from "../../models/users/employeeModel.js";
+import EmployeeModel from "../../models/users/employeeModel.js";
 import crudUtils from "../../utils/users/crudUtils.js";
 import validationUtils from "../../utils/auth/validationsUsersUtils.js";
 import invitationValidationsUtils from "../../utils/auth/invitationValidationsUtils.js";
@@ -11,11 +11,11 @@ const employeeController = {};
 // Obtiene la lista de todos los empleados
 employeeController.getEmployees = async (req, res) => {
     try {
-        const employees = await crudUtils.searchDocuments(employeeModel, req.query);
+        const employees = await crudUtils.searchDocuments(EmployeeModel, req.query);
         return res.status(200).json(employees);
     } catch (error) {
-        console.error("Error getting employees:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("employeeController.getEmployees:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "No se pudo obtener la lista de empleados." });
     }
 };
 
@@ -28,11 +28,11 @@ employeeController.updateEmployee = async (req, res) => {
 
         // Mapeo dinámico y validaciones
         if (name !== undefined) {
-            validationsToRun.push(() => validationUtils.validateName(name, "Name"));
+            validationsToRun.push(() => validationUtils.validateName(name, "El nombre"));
             updateData["personalInfo.name"] = name.trim();
         }
         if (lastname !== undefined) {
-            validationsToRun.push(() => validationUtils.validateName(lastname, "Lastname"));
+            validationsToRun.push(() => validationUtils.validateName(lastname, "El apellido"));
             updateData["personalInfo.lastname"] = lastname.trim();
         }
         if (phone !== undefined) {
@@ -48,14 +48,14 @@ employeeController.updateEmployee = async (req, res) => {
             updateData["personalInfo.type"] = type;
         }
         if (salary !== undefined) {
-            validationsToRun.push(() => validationUtils.validatePositiveNumber(salary, "Salary"));
+            validationsToRun.push(() => validationUtils.validatePositiveNumber(salary, "El salario"));
             updateData["workInfo.salary"] = Number(salary);
         }
         if (shift !== undefined) {
             validationsToRun.push(() =>
                 typeof shift === "string" && shift.trim().length > 0
                     ? { valid: true }
-                    : { valid: false, message: "Shift must be a non-empty string." }
+                    : { valid: false, message: "El turno debe ser un texto no vacío." }
             );
             updateData["workInfo.shift"] = typeof shift === "string" ? shift.trim() : shift;
         }
@@ -63,7 +63,7 @@ employeeController.updateEmployee = async (req, res) => {
             validationsToRun.push(() =>
                 typeof schedule === "string" && schedule.trim().length > 0
                     ? { valid: true }
-                    : { valid: false, message: "Schedule must be a non-empty string." }
+                    : { valid: false, message: "El horario debe ser un texto no vacío." }
             );
             updateData["workInfo.schedule"] = typeof schedule === "string" ? schedule.trim() : schedule;
         }
@@ -78,24 +78,24 @@ employeeController.updateEmployee = async (req, res) => {
         // Ejecutar todas las validaciones acumuladas
         if (validationsToRun.length > 0) {
             const result = validationUtils.runValidations(validationsToRun);
-            if (!result.valid) return res.status(400).json({ message: result.message });
+            if (!result.valid) return res.status(400).json({ title: "Datos inválidos", message: result.message });
         }
 
         // Si viene una foto nueva, guardamos la URL de la anterior para
         // borrarla de Cloudinary después de que la actualización tenga éxito
         let previousImage = null;
         if (req.file) {
-            const currentEmployee = await employeeModel.findById(req.params.id).select("personalInfo.image");
+            const currentEmployee = await EmployeeModel.findById(req.params.id).select("personalInfo.image");
             previousImage = currentEmployee?.personalInfo?.image || null;
         }
 
-        const updatedEmployee = await employeeModel.findByIdAndUpdate(
+        const updatedEmployee = await EmployeeModel.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
             { new: true, runValidators: true }
         ).select("-loginInfo.password");
 
-        if (!updatedEmployee) return res.status(404).json({ message: "Employee not found" });
+        if (!updatedEmployee) return res.status(404).json({ title: "Empleado no encontrado", message: "No se encontró el empleado solicitado." });
 
         // La imagen anterior ya no la usa nadie, la eliminamos de Cloudinary
         if (previousImage) {
@@ -119,10 +119,10 @@ employeeController.updateEmployee = async (req, res) => {
             entity: { model: "Employee", id: updatedEmployee._id, label: employeeName },
         });
 
-        return res.status(200).json({ message: "Employee updated successfully", data: updatedEmployee });
+        return res.status(200).json({ title: "Empleado actualizado", message: "Los datos se actualizaron correctamente.", data: updatedEmployee });
     } catch (error) {
-        console.error("Error updating employee:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("employeeController.updateEmployee:", error);
+        return res.status(500).json({ title: "Error del servidor", message: "No se pudo actualizar el empleado." });
     }
 };
 

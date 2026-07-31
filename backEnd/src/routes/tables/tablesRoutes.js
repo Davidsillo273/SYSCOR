@@ -11,7 +11,7 @@ router
 
 router
   .route("/:id")
-  .put(tablesController.updateTable)
+  .patch(tablesController.updateTable)
   .delete(tablesController.deleteTable);
 
 export default router;

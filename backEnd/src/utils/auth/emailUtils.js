@@ -10,11 +10,11 @@ const generateVerificationCode = () => {
 };
 
 const generateToken = (payload, expiresIn = "15m") => {
-  return jsonwebtoken.sign(payload, config.JWT.secret, { expiresIn });
+  return jsonwebtoken.sign(payload, config.jwt.secret, { expiresIn });
 };
 
 const verifyToken = (token) => {
-  return jsonwebtoken.verify(token, config.JWT.secret);
+  return jsonwebtoken.verify(token, config.jwt.secret);
 };
 
 // ─── Mailer ──────────────────────────────────────────────────────────────────
@@ -22,14 +22,14 @@ const verifyToken = (token) => {
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: config.email.user_email,
-    pass: config.email.user_password,
+    user: config.email.userEmail,
+    pass: config.email.userPassword,
   },
 });
 
 const sendEmail = async (to, subject, html) => {
   const mailOptions = {
-    from: `"SYSCOR – Taquería El Corral" <${config.email.user_email}>`,
+    from: `"SYSCOR – Taquería El Corral" <${config.email.userEmail}>`,
     to,
     subject,
     html,

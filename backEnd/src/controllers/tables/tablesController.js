@@ -1,18 +1,18 @@
 const tablesController = {};
 
 // Importamos el modelo de las mesas para interactuar con la base de datos
-import tablesModel from "../../models/tables/tablesModels.js";
+import TablesModel from "../../models/tables/tablesModel.js";
 // Utilidad para registrar los movimientos como notificaciones del sistema
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
 
 // Obtiene todas las mesas registradas en el restaurante
 tablesController.getTables = async (req, res) => {
   try {
-    const tables = await tablesModel.find();
+    const tables = await TablesModel.find();
     return res.status(200).json(tables);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("tablesController.getTables:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -23,7 +23,7 @@ tablesController.insertTable = async (req, res) => {
 
     
     // Preparamos la nueva mesa para guardarla
-    const newTable = new tablesModel({
+    const newTable = new TablesModel({
       number,
       status,
     });
@@ -42,21 +42,21 @@ tablesController.insertTable = async (req, res) => {
       entity: { model: "Tables", id: newTable._id, label: `Mesa ${newTable.number}` },
     });
 
-    return res.status(201).json({ message: "Table saved" });
+    return res.status(201).json({ title: "Mesa agregada", message: "La mesa se guardó correctamente." });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("tablesController.insertTable:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Elimina una mesa existente usando su ID
 tablesController.deleteTable = async (req, res) => {
   try {
-    const deletedTable = await tablesModel.findByIdAndDelete(req.params.id);
+    const deletedTable = await TablesModel.findByIdAndDelete(req.params.id);
 
     // Si no encuentra la mesa, devuelve un error 404 (No encontrado)
     if (!deletedTable) {
-      return res.status(404).json({ message: "Table not found" });
+      return res.status(404).json({ title: "Mesa no encontrada", message: "No se encontró la mesa solicitada." });
     }
 
     await notificationUtils.createNotification({
@@ -70,10 +70,10 @@ tablesController.deleteTable = async (req, res) => {
       entity: { model: "Tables", id: deletedTable._id, label: `Mesa ${deletedTable.number}` },
     });
 
-    return res.status(200).json({ message: "Table deleted" });
+    return res.status(200).json({ title: "Mesa eliminada", message: "La mesa se eliminó correctamente." });
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("tablesController.deleteTable:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -83,10 +83,10 @@ tablesController.updateTable = async (req, res) => {
     let { number, status } = req.body;
 
     // Guardamos el estado anterior para saber si la mesa cambió de disponible a ocupada
-    const previousTable = await tablesModel.findById(req.params.id).select("status");
+    const previousTable = await TablesModel.findById(req.params.id).select("status");
 
     // Buscamos la mesa por su ID y le aplicamos los nuevos datos
-    const tableUpdated = await tablesModel.findByIdAndUpdate(
+    const tableUpdated = await TablesModel.findByIdAndUpdate(
       req.params.id,
       {
         number,
@@ -96,7 +96,7 @@ tablesController.updateTable = async (req, res) => {
     );
 
     if (!tableUpdated) {
-      return res.status(404).json({ message: "Table not found" });
+      return res.status(404).json({ title: "Mesa no encontrada", message: "No se encontró la mesa solicitada." });
     }
 
     const statusChanged = status !== undefined && previousTable?.status !== status;
@@ -115,10 +115,10 @@ tablesController.updateTable = async (req, res) => {
       entity: { model: "Tables", id: tableUpdated._id, label: `Mesa ${tableUpdated.number}` },
     });
 
-    return res.status(200).json({ message: "Table updated" });
+    return res.status(200).json({ title: "Mesa actualizada", message: "La mesa se actualizó correctamente." });
   } catch (error) {
     console.log("error found " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 

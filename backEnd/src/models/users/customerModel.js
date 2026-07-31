@@ -1,4 +1,3 @@
-// Importamos mongoose para el modelo de datos
 import mongoose, { Schema, model } from "mongoose";
 
 // Sub-esquema para guardar las tarjetas de pago del cliente

@@ -1,13 +1,28 @@
-// Importamos las herramientas de Mongoose para definir cómo se guardarán los datos en la base de datos
-import {Schema, model} from "mongoose"
+import { Schema, model } from "mongoose"
+import { UNIT_LIST } from "../../utils/units/unitsUtils.js"
 
-// Definimos el "esqueleto" o estructura que tendrá cada artículo del inventario
+// Definimos el "esqueleto" o estructura que tendrá cada artículo del inventario.
+// Inventario ahora se divide en dos categorías principales:
+//   - "producto": materia prima/mercancía que se consume y descuenta stock
+//     (carnes, verduras, bebidas embotelladas, etc.)
+//   - "activo_fijo": mobiliario/equipo del local (mesas, sillas, electrónica...),
+//     no se descuenta por recetas, solo se controla su cantidad y estado.
 const inventorySchema = new Schema({
     // Nombre del artículo
     name: {
         type: String
     },
-    // Precio del artículo
+    // Categoría principal: producto de consumo o activo fijo
+    itemType: {
+        type: String,
+        enum: ["producto", "activo_fijo"],
+        default: "producto"
+    },
+    // Foto del artículo (opcional: si no hay, el front usa un placeholder)
+    image: { type: String },
+    // ID de la imagen en Cloudinary
+    publicId: { type: String },
+    // Precio unitario (producto) o valor de adquisición (activo fijo)
     price:{
         type: Number
     },
@@ -19,26 +34,44 @@ const inventorySchema = new Schema({
     quantity:{
         type: Number
     },
-    // Categoría fija del insumo, usada también para filtrar ingredientes al
-    // armar recetas de bebidas/platillos
+    // Categoría dentro de su itemType: para "producto" son las categorías de
+    // materia prima (Aves, Carnes...); para "activo_fijo" son categorías de
+    // mobiliario/equipo (Mobiliario, Electrónica...). Se valida en el
+    // controlador según itemType, no aquí, para no mezclar dos catálogos en un enum.
     type: {
-        type: String,
-        enum: ["Aves", "Carnes", "Verduras", "Frutas", "Minerales", "Otros"]
+        type: String
     },
-    // Estado del artículo (ej. activo, inactivo)
+    // Estado del artículo (ej. disponible, agotado — producto; o condición
+    // física — activo fijo, ver "condition")
     status: {
         type: String
     },
-    // Unidad en la que se mide (para insumos usados en recetas de bebidas)
+    // Condición física. Solo aplica a activos fijos
+    condition: {
+        type: String,
+        enum: ["Nuevo", "Bueno", "Regular", "Dañado", "De baja"]
+    },
+    // Fecha de adquisición. Solo aplica a activos fijos (opcional)
+    acquisitionDate: {
+        type: Date
+    },
+    // Unidad en la que se mide. Solo aplica a "producto" (para recetas de
+    // bebidas/platillos/extras y el descuento automático de inventario)
     unit: {
         type: String,
-        enum: ["unidad", "g", "kg", "ml", "l", "cucharadita", "cucharada", "taza", "vaso", "pizca"]
+        enum: UNIT_LIST
     },
     // true cuando el insumo se creó al vuelo desde el builder de receta de una
-    // bebida (solo con nombre + unidad) y todavía le falta precio/ubicación/tipo reales
+    // bebida/platillo/extra (solo con nombre + unidad) y todavía le falta
+    // precio/ubicación/categoría reales
     pending: {
         type: Boolean,
         default: false
+    },
+    // Umbral de alerta propio de este insumo. Si no se define, se usa el
+    // umbral general de la sección (Ajustes > Inventario). Solo aplica a "producto"
+    lowStockAlert: {
+        type: Number
     }
 },
 {

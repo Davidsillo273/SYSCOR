@@ -1,41 +1,54 @@
-// Importamos dotenv para poder leer las variables de entorno desde nuestro archivo .env
+// Cargamos las variables de entorno desde el archivo .env para poder usarlas aquí abajo
 import dotenv from "dotenv"
 
-// Ejecutamos la configuración inicial para cargar las variables
+// Leemos el archivo .env y lo volcamos en process.env
 dotenv.config();
 
-// Exportamos un objeto con todas las configuraciones ordenadas por categorías
-// Esto nos facilita el acceso a estas variables en cualquier parte del proyecto
+// Este objeto junta toda la configuración sensible del sistema (claves, URLs,
+// credenciales) en un solo lugar, para no tener variables de entorno sueltas
+// por todo el código
 export const config = {
-    // Configuración para la conexión a la base de datos
+    // Datos para conectarnos a la base de datos
     db: {
-        URI: process.env.DB_URI
+        uri: process.env.DB_URI
     },
-    // Configuración para los tokens de seguridad (JWT)
-    JWT: {
+    // Clave secreta con la que firmamos y verificamos las sesiones de los usuarios
+    jwt: {
         secret: process.env.JWT_Secret_key
     },
-    // Credenciales para el envío de correos electrónicos
+    // Cuenta de correo desde la que el sistema manda los emails (códigos, invitaciones, etc.)
     email: {
-        user_email: process.env.USER_EMAIL,
-        user_password: process.env.USER_PASSWORD
+        userEmail: process.env.USER_EMAIL,
+        userPassword: process.env.USER_PASSWORD
     },
-    // Credenciales de Cloudinary, usado para subir y gestionar imágenes
-    cloudinary:{
-        cloudinary_name:  process.env.CLOUDINARY_CLOUD_NAME,
-        cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
-        cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET
+    // Credenciales de Cloudinary, el servicio donde guardamos las imágenes que suben los admins
+    cloudinary: {
+        cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME,
+        cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+        cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET
     },
-    // URL principal de nuestra aplicación
+    // Dirección donde vive nuestro propio backend
     appUrl: process.env.APP_URL,
-    // Credenciales para la integración con la pasarela de pagos Wompi
+    // Credenciales para conectarnos con Wompi, la pasarela que procesa los pagos
     wompi: {
-        grant_type: process.env.GRANT_TYPE,
+        grantType: process.env.GRANT_TYPE,
         audience: process.env.AUDIENCE,
-        client_id: process.env.CLIENT_ID,
-        client_secret: process.env.CLIENT_SECRET
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET
     },
-    // URL del frontend para permitir las conexiones de origen cruzado (CORS)
-    // Si no existe la variable, usamos localhost:5173 por defecto
-    frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173"
+    // Dirección del frontend. La usamos para permitirle hacer peticiones al
+    // backend sin que el navegador las bloquee (CORS). Si no está definida,
+    // asumimos que estamos en desarrollo local
+    frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+    // Credenciales para pedirle ayuda a la IA (sugerir recetas, proyectar
+    // cuándo se va a agotar un insumo). Si falta la clave, esas funciones
+    // simplemente no responden nada: nunca frenan el resto del sistema
+    gemini: {
+        apiKey: process.env.GEMINI_API_KEY,
+        // "gemini-2.5-flash-lite" ya no está disponible para proyectos nuevos
+        // (Google la retiró y devuelve error 404). "gemini-flash-lite-latest"
+        // es el alias que Google mantiene apuntando siempre al modelo
+        // flash-lite vigente, así no se vuelve a romper cuando cambien de versión
+        model: process.env.GEMINI_MODEL || "gemini-flash-lite-latest"
+    }
 }

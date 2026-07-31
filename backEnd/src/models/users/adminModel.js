@@ -1,4 +1,3 @@
-// Importamos mongoose para modelar los datos
 import mongoose, { Schema, model } from "mongoose";
 
 // Definimos el perfil de un Administrador

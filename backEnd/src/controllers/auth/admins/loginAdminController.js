@@ -1,5 +1,5 @@
 // Importamos el modelo de Administrador y las utilidades para iniciar sesión
-import adminModel from "../../../models/users/adminModel.js";
+import AdminModel from "../../../models/users/adminModel.js";
 import processLogin from "../../../utils/auth/loginUtils.js";
 import cookieConfig from "../../../config/cookieConfig.js";
 
@@ -12,7 +12,7 @@ loginAdminController.loginAdmin = async (req, res) => {
         const { email, password } = req.body;
 
         // Usamos nuestra herramienta processLogin para verificar si las credenciales son correctas
-        const result = await processLogin(adminModel, email, password, "admin");
+        const result = await processLogin(AdminModel, email, password, "admin");
 
         // Si processLogin nos devuelve un error (contraseña incorrecta, usuario no existe, etc)
         if (result.error) {

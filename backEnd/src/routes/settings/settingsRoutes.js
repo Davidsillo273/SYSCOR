@@ -9,6 +9,6 @@ const router = express.Router();
 router.get("/", validateAuthCookie(["admin", "employee"]), settingsController.getSettings);
 
 // Pero solo el administrador puede modificarla
-router.put("/", validateAuthCookie(["admin"]), settingsController.updateSettings);
+router.patch("/", validateAuthCookie(["admin"]), settingsController.updateSettings);
 
 export default router;

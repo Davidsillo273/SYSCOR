@@ -1,31 +1,56 @@
 const extrasController = {};
 
 // Importamos el modelo de los extras (complementos) y sus validaciones
-import extrasModel from "../../models/menu/extrasModel.js";
+import ExtrasModel from "../../models/menu/extrasModel.js";
 import validationsExtras from "../../utils/extras/validationsExtrasUtils.js";
+import { v2 as cloudinary } from "cloudinary";
 // Utilidad para registrar los movimientos del menú como notificaciones
 import notificationUtils from "../../utils/notifications/notificationUtils.js";
-import cartModel from "../../models/orders/cartModel.js";
+import CartModel from "../../models/orders/cartModel.js";
+import { findByNameInsensitive } from "../../utils/common/duplicateNameUtils.js";
+
+// Busca si ya existe un extra con ese nombre (sugerencia, no bloqueo)
+extrasController.checkName = async (req, res) => {
+  try {
+    const existing = await findByNameInsensitive(ExtrasModel, req.query.name);
+    return res.status(200).json({ existing: existing || null });
+  } catch (error) {
+    console.log("error" + error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
+  }
+};
+
+// Los ingredientes llegan como FormData, así que viajan como string JSON
+const parseIngredients = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 // Obtiene todos los complementos (extras) del menú, sin importar su estado
 extrasController.getExtras = async (req, res) => {
   try {
-    const extras = await extrasModel.find();
+    const extras = await ExtrasModel.find().sort({ createdAt: -1 }).populate("ingredients.ingredientId", "name unit");
     return res.status(200).json(extras);
   } catch (error) {
     console.log("error" + error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Obtiene solo los complementos que están activos (disponibles para venta)
 extrasController.getActiveExtras = async (req, res) => {
   try {
-    const extras = await extrasModel.find({ status: "DISPONIBLE" });
+    const extras = await ExtrasModel.find({ status: "DISPONIBLE" });
     return res.status(200).json(extras);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("extrasController.getActiveExtras:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -35,7 +60,7 @@ extrasController.getBestSellers = async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 5;
 
-    const ranking = await cartModel.aggregate([
+    const ranking = await CartModel.aggregate([
       { $unwind: "$details" },
       { $unwind: "$details.extras" },
       {
@@ -60,15 +85,17 @@ extrasController.getBestSellers = async (req, res) => {
 
     return res.status(200).json(ranking);
   } catch (error) {
-    console.log("error " + error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("extrasController.getBestSellers:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Crea un nuevo complemento en el menú
 extrasController.insertExtras = async (req, res) => {
   try {
-    let { name, price, status, category } = req.body;
+    let { name, price, status, category, isCompound } = req.body;
+    const ingredients = parseIngredients(req.body.ingredients);
+    const compound = isCompound === true || isCompound === "true";
 
     // Validamos que el nombre, precio y estado tengan el formato correcto
     let validation = validationsExtras.validateName(name);
@@ -80,12 +107,21 @@ extrasController.insertExtras = async (req, res) => {
     validation = validationsExtras.validateStatus(status);
     if (!validation.valid) return res.status(400).json({message: validation.message});
 
-    // Creamos el nuevo complemento
-    const newExtra = new extrasModel({
+    validation = validationsExtras.validateImage(req.file);
+    if (!validation.valid) return res.status(400).json({message: validation.message});
+
+    validation = validationsExtras.validateIngredients(ingredients, compound);
+    if (!validation.valid) return res.status(400).json({message: validation.message});
+
+    // Creamos el nuevo complemento (imagen e ingredientes de inventario opcionales)
+    const newExtra = new ExtrasModel({
       name,
       price,
       category,
       status,
+      isCompound: compound,
+      ingredients: compound ? ingredients : [],
+      ...(req.file ? { image: req.file.path, publicId: req.file.filename } : {}),
     });
 
     // Guardamos en la base de datos
@@ -103,22 +139,26 @@ extrasController.insertExtras = async (req, res) => {
       entity: { model: "Extras", id: newExtra._id, label: newExtra.name },
     });
 
-    return res.status(201).json({ message: "Extra saved" });
+    return res.status(201).json({ title: "Extra agregado", message: "El extra se guardó correctamente." });
   } catch (error) {
     console.log("error" + error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Elimina un complemento del menú
 extrasController.deleteExtra = async (req, res) => {
   try {
-    const deletedExtra = await extrasModel.findByIdAndDelete(req.params.id);
-
-    // Si no se encuentra el complemento, mostramos un error
-    if (!deletedExtra) {
-      return res.status(404).json({ message: "Extra not found" });
+    const extraFound = await ExtrasModel.findById(req.params.id);
+    if (!extraFound) {
+      return res.status(404).json({ title: "Extra no encontrado", message: "No se encontró el extra solicitado." });
     }
+
+    if (extraFound.publicId) {
+      await cloudinary.uploader.destroy(extraFound.publicId);
+    }
+
+    const deletedExtra = await ExtrasModel.findByIdAndDelete(req.params.id);
 
     await notificationUtils.createNotification({
       req,
@@ -131,17 +171,19 @@ extrasController.deleteExtra = async (req, res) => {
       entity: { model: "Extras", id: deletedExtra._id, label: deletedExtra.name },
     });
 
-    return res.status(200).json({ message: "Extra deleted" });
+    return res.status(200).json({ title: "Extra eliminado", message: "El extra se eliminó correctamente." });
   } catch (error) {
     console.log("error" + error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
 // Actualiza un complemento existente (por ejemplo, cambiarle el precio)
 extrasController.updateExtra = async (req, res) => {
   try {
-    let { name, price, status, category } = req.body;
+    let { name, price, status, category, isCompound } = req.body;
+    const ingredients = parseIngredients(req.body.ingredients);
+    const compound = isCompound === true || isCompound === "true";
 
     // Validamos los datos nuevos
     let validation = validationsExtras.validateName(name);
@@ -153,16 +195,31 @@ extrasController.updateExtra = async (req, res) => {
     validation = validationsExtras.validateStatus(status);
     if (!validation.valid) return res.status(400).json({message: validation.message});
 
+    validation = validationsExtras.validateIngredients(ingredients, compound);
+    if (!validation.valid) return res.status(400).json({message: validation.message});
+
+    const extraFound = await ExtrasModel.findById(req.params.id);
+    if (!extraFound) {
+      return res.status(404).json({ title: "Extra no encontrado", message: "No se encontró el extra solicitado." });
+    }
+
+    const updatedData = { name, price, category, status, isCompound: compound, ingredients: compound ? ingredients : [] };
+
+    // Si hay una nueva imagen, borramos la antigua y registramos la nueva
+    if (req.file) {
+      if (extraFound.publicId) {
+        await cloudinary.uploader.destroy(extraFound.publicId);
+      }
+      updatedData.image = req.file.path;
+      updatedData.publicId = req.file.filename;
+    }
+
     // Buscamos y actualizamos el complemento
-    const extraUpdated = await extrasModel.findByIdAndUpdate(
+    const extraUpdated = await ExtrasModel.findByIdAndUpdate(
       req.params.id,
-      { name, price, category, status },
+      updatedData,
       { new: true } // Para que nos devuelva el objeto ya actualizado
     );
-
-    if (!extraUpdated) {
-      return res.status(404).json({ message: "Extra not found" });
-    }
 
     await notificationUtils.createNotification({
       req,
@@ -176,10 +233,10 @@ extrasController.updateExtra = async (req, res) => {
       entity: { model: "Extras", id: extraUpdated._id, label: extraUpdated.name },
     });
 
-    return res.status(200).json({ message: "Extra updated" });
+    return res.status(200).json({ title: "Extra actualizado", message: "El extra se actualizó correctamente." });
   } catch (error) {
     console.log("error found" + error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 

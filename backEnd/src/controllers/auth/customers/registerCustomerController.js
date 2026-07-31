@@ -1,6 +1,6 @@
 // Importamos bcryptjs para la seguridad de contraseñas y las utilidades para el registro de clientes
 import bcryptjs from "bcryptjs";
-import customerModel from "../../../models/users/customerModel.js";
+import CustomerModel from "../../../models/users/customerModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
 import customerUtils from "../../../utils/auth/customers/validationsCustomersUtils.js";
@@ -20,14 +20,14 @@ registerCustomerController.sendCode = async (req, res) => {
   // Validación básica de formato antes de tocar la base de datos
   const emailValidation = utils.validateEmail(email);
   if (!emailValidation.valid) {
-    return res.status(400).json({ message: emailValidation.message });
+    return res.status(400).json({ title: "Correo inválido", message: emailValidation.message });
   }
 
   try {
     // Evita cuentas duplicadas
-    const exists = await customerModel.findOne({ "loginInfo.email": email.toLowerCase().trim() });
+    const exists = await CustomerModel.findOne({ "loginInfo.email": email.toLowerCase().trim() });
     if (exists) {
-      return res.status(409).json({ message: "An account with this email already exists." });
+      return res.status(409).json({ title: "Cuenta ya existe", message: "Ya existe una cuenta registrada con este correo electrónico." });
     }
 
     // Genera un código de un solo uso y lo mete en un token firmado (aún no se guarda en la DB)
@@ -43,14 +43,14 @@ registerCustomerController.sendCode = async (req, res) => {
     // Envía el código por correo para que el usuario demuestre que es dueño de esa dirección
     await emailUtils.sendEmail(
       email,
-      "Verify your account – Taquería El Corral",
+      "Verifica tu cuenta – Taquería El Corral",
       emailUtils.HTMLVerificationEmail(verificationCode)
     );
 
-    return res.status(200).json({ message: "Verification code sent to your email." });
+    return res.status(200).json({ title: "Código enviado", message: "Se envió un código de verificación a tu correo electrónico." });
   } catch (error) {
     console.error("registerCustomerController.sendCode:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al enviar el código." });
   }
 };
 
@@ -66,21 +66,21 @@ registerCustomerController.verifyCode = async (req, res) => {
 
   const codeValidation = utils.validateVerificationCode(code);
   if (!codeValidation.valid) {
-    return res.status(400).json({ message: codeValidation.message });
+    return res.status(400).json({ title: "Código inválido", message: codeValidation.message });
   }
 
   try {
     const token = req.cookies.customerVerificationToken;
     if (!token) {
       // Si no hay cookie significa que el paso 1 nunca se completó o ya expiró
-      return res.status(401).json({ message: "Verification session expired. Please try again." });
+      return res.status(401).json({ title: "Sesión expirada", message: "La verificación expiró. Vuelve a intentarlo desde el inicio." });
     }
 
     // Lanza error si está expirado/inválido — se captura abajo
     const decoded = emailUtils.verifyToken(token);
 
     if (code.toUpperCase() !== decoded.verificationCode) {
-      return res.status(400).json({ message: "The verification code is incorrect." });
+      return res.status(400).json({ title: "Código incorrecto", message: "El código de verificación es incorrecto." });
     }
 
     // Reemplaza la cookie de verificación por una cookie de "registro" que
@@ -96,13 +96,13 @@ registerCustomerController.verifyCode = async (req, res) => {
       maxAge: 30 * 60 * 1000,
     });
 
-    return res.status(200).json({ message: "Email verified. Continue with your information." });
+    return res.status(200).json({ title: "Correo verificado", message: "Tu correo fue verificado. Continúa con tus datos personales." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "The code has expired. Please request a new one." });
+      return res.status(401).json({ title: "Código expirado", message: "El código ya venció. Solicita uno nuevo." });
     }
     console.error("registerCustomerController.verifyCode:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al verificar el código." });
   }
 };
 
@@ -118,8 +118,8 @@ registerCustomerController.personalInfo = async (req, res) => {
   // Arma la lista de validadores dinámicamente: birthdate/phones son
   // opcionales, así que solo se validan si el usuario realmente los envió
   const validators = [
-    () => utils.validateName(name, "First name"),
-    () => utils.validateName(lastname, "Last name"),
+    () => utils.validateName(name, "El nombre"),
+    () => utils.validateName(lastname, "El apellido"),
   ];
 
   if (birthdate) validators.push(() => customerUtils.validateBirthdate(birthdate));
@@ -127,19 +127,19 @@ registerCustomerController.personalInfo = async (req, res) => {
 
   const validation = utils.runValidations(validators);
   if (!validation.valid) {
-    return res.status(400).json({ message: validation.message });
+    return res.status(400).json({ title: "Datos inválidos", message: validation.message });
   }
 
   try {
     const token = req.cookies.customerRegistrationToken;
     if (!token) {
-      return res.status(401).json({ message: "Registration session expired. Please verify your email again." });
+      return res.status(401).json({ title: "Sesión expirada", message: "La sesión de registro expiró. Verifica tu correo nuevamente." });
     }
 
     const decoded = emailUtils.verifyToken(token);
     if (!decoded.emailVerified) {
       // Chequeo defensivo: alguien intentando saltarse directo a este paso
-      return res.status(401).json({ message: "The email has not been verified." });
+      return res.status(401).json({ title: "Correo no verificado", message: "Todavía no verificaste tu correo electrónico." });
     }
 
     // Normaliza las direcciones: asegura que exactamente una quede marcada
@@ -178,13 +178,13 @@ registerCustomerController.personalInfo = async (req, res) => {
       maxAge: 30 * 60 * 1000,
     });
 
-    return res.status(200).json({ message: "Information saved. Create your password." });
+    return res.status(200).json({ title: "Datos guardados", message: "Tus datos se guardaron. Ahora crea tu contraseña." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Session expired. Please verify your email again." });
+      return res.status(401).json({ title: "Sesión expirada", message: "La sesión expiró. Verifica tu correo nuevamente." });
     }
     console.error("registerCustomerController.personalInfo:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al guardar tus datos." });
   }
 };
 
@@ -199,33 +199,33 @@ registerCustomerController.setPassword = async (req, res) => {
 
   const passwordValidation = utils.validatePassword(password);
   if (!passwordValidation.valid) {
-    return res.status(400).json({ message: passwordValidation.message });
+    return res.status(400).json({ title: "Contraseña inválida", message: passwordValidation.message });
   }
 
   try {
     const token = req.cookies.customerRegistrationToken;
     if (!token) {
-      return res.status(401).json({ message: "Registration session expired." });
+      return res.status(401).json({ title: "Sesión expirada", message: "La sesión de registro expiró." });
     }
 
     const decoded = emailUtils.verifyToken(token);
     if (!decoded.emailVerified || !decoded.personalInfo) {
       // Confirma que los pasos 2 y 3 realmente se completaron antes de permitir este
-      return res.status(401).json({ message: "Incomplete registration. Please start over." });
+      return res.status(401).json({ title: "Registro incompleto", message: "El registro está incompleto. Empieza de nuevo." });
     }
 
     const { email, personalInfo } = decoded;
 
     // Vuelve a chequear que no se haya colado un duplicado mientras el usuario llenaba el formulario
-    const exists = await customerModel.findOne({ "loginInfo.email": email });
+    const exists = await CustomerModel.findOne({ "loginInfo.email": email });
     if (exists) {
-      return res.status(409).json({ message: "An account with this email already exists." });
+      return res.status(409).json({ title: "Cuenta ya existe", message: "Ya existe una cuenta registrada con este correo electrónico." });
     }
 
     const passwordHash = await bcryptjs.hash(password, 10);
 
     // Este es el único lugar donde el documento se crea realmente en la DB
-    const newCustomer = new customerModel({
+    const newCustomer = new CustomerModel({
       personalInfo: {
         name: personalInfo.name,
         lastname: personalInfo.lastname,
@@ -268,13 +268,13 @@ registerCustomerController.setPassword = async (req, res) => {
       },
     });
 
-    return res.status(201).json({ message: "Account created successfully. Welcome to Taquería El Corral!" });
+    return res.status(201).json({ title: "Cuenta creada", message: "Tu cuenta se creó correctamente. ¡Bienvenido a Taquería El Corral!" });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Session expired. Please start the registration over." });
+      return res.status(401).json({ title: "Sesión expirada", message: "La sesión expiró. Empieza el registro de nuevo." });
     }
     console.error("registerCustomerController.setPassword:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al crear la cuenta." });
   }
 };
 

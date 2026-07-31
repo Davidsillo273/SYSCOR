@@ -1,5 +1,5 @@
 import express from "express";
-import saucersController from "../../controllers/menu/saucersControlle.js";
+import saucersController from "../../controllers/menu/saucersController.js";
 import upload from "../../utils/cloudinaryConfig.js";
 import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
 
@@ -15,9 +15,12 @@ router
   // Ranking de platillos más vendidos
   router.get("/best-sellers", saucersController.getBestSellers);
 
+  // Revisa si ya existe un platillo con ese nombre (sugerencia, no bloqueo)
+  router.get("/check-name", saucersController.checkName);
+
 router
   .route("/:id")
-  .put(upload.single("image"), saucersController.updateSaucer)
+  .patch(upload.single("image"), saucersController.updateSaucer)
   .delete(saucersController.deleteSaucer);
 
 export default router;

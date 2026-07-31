@@ -7,6 +7,6 @@ const router = express.Router();
 router.route("/").get(customerController.getCustomers);
 router
     .route("/:id")
-    .put( customerController.updateCustomer)
+    .patch(customerController.updateCustomer)
 
 export default router;

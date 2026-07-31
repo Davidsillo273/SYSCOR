@@ -1,8 +1,5 @@
-// Importamos mongoose para la base de datos
 import mongoose, {Schema, model} from "mongoose"
-
-// Unidades de medida más comunes para describir cantidades de una receta
-const RECIPE_UNITS = ["unidad", "g", "kg", "ml", "l", "cucharadita", "cucharada", "taza", "vaso", "pizca"];
+import { UNIT_LIST } from "../../utils/units/unitsUtils.js"
 
 // Definimos la estructura para los Platos principales (Saucers)
 const saucersSchema = new Schema({
@@ -12,23 +9,31 @@ const saucersSchema = new Schema({
     name: { type: String },
     // Categoría fija del platillo
     category: { type: String, enum: ["Burritos", "Tortas", "Tacos", "Sopas", "Especiales"] },
-    // Solo aplica si category es Burritos/Tortas/Tacos
-    isBirria: { type: Boolean, default: false },
+    // Descripción libre del platillo
+    description: { type: String },
+    // Subcategoría de proteína (Al pastor, Pollo, Carne, Birria, etc.). No
+    // aplica a Sopas ni Especiales.
+    subcategory: { type: String },
+    // Cantidad de tacos por orden. Solo aplica cuando category es "Tacos": el
+    // sistema detecta la categoría y muestra los botones 3/4/5 automáticamente.
+    // El enum [3,4,5] se valida en el controller.
+    quantity: { type: Number },
     // Precio del plato
     price: { type: Number },
     // Si está disponible a la venta. Nace 'Activo' por default
     status: { type: String, default: "Activo" },
     // Identificador de la imagen alojada
-    public_id: { type: String },
+    publicId: { type: String },
     // Receta opcional: ingredientes del platillo, igual que en Drinks, con un
-    // flag extra para saber si el cliente puede pedir que se lo quiten
+    // flag extra para saber si el cliente puede pedir que se lo quiten. Los
+    // ingredientes con tracked:true descuentan inventario al confirmar la orden.
     recipe: [{
         name: { type: String },
         tracked: { type: Boolean, default: false },
         inventoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Inventory", default: null },
         removable: { type: Boolean, default: false },
-        quantity: { type: String },
-        unit: { type: String, enum: RECIPE_UNITS }
+        quantity: { type: Number },
+        unit: { type: String, enum: UNIT_LIST }
     }]
 },
 {

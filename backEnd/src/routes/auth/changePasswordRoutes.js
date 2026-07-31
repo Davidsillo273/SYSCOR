@@ -6,7 +6,7 @@ const router = Router();
 
 // Cualquier usuario con sesión activa puede cambiar su propia contraseña
 router.patch(
-  "/changePassword",
+  "/update-password",
   validateAuthCookie(["admin", "employee", "customer"]),
   changePasswordController.changePassword
 );

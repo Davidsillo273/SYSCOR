@@ -1,8 +1,7 @@
 // Importamos los modelos y utilidades necesarias para gestionar invitaciones y envíos de correo
-import adminModel from "../../../models/users/adminModel.js";
+import AdminModel from "../../../models/users/adminModel.js";
 import emailUtils from "../../../utils/auth/emailUtils.js";
 import utils from "../../../utils/auth/validationsUsersUtils.js";
-import invitationValidationsUtils from "../../../utils/auth/invitationValidationsUtils.js";
 import notificationUtils from "../../../utils/notifications/notificationUtils.js";
 import { config } from "../../../../config.js";
 
@@ -23,20 +22,21 @@ inviteAdminController.sendInvitation = async (req, res) => {
 
   const validation = utils.runValidations([
     () => utils.validateEmail(email),
-    () => utils.validateName(name, "First name"),
-    () => utils.validateName(lastname, "Last name"),
+    () => utils.validateName(name, "El nombre"),
+    () => utils.validateName(lastname, "El apellido"),
   ]);
 
   if (!validation.valid) {
-    return res.status(400).json({ message: validation.message });
+    return res.status(400).json({ title: "Datos inválidos", message: validation.message });
   }
 
   try {
     const normalizedEmail = email.toLowerCase().trim();
 
-    const exists = await adminModel.findOne({ "loginInfo.email": normalizedEmail });
+    // Si ya existe un admin con ese correo, no tiene sentido invitarlo de nuevo
+    const exists = await AdminModel.findOne({ "loginInfo.email": normalizedEmail });
     if (exists) {
-      return res.status(409).json({ message: "An administrator with this email already exists." });
+      return res.status(409).json({ title: "Administrador ya existe", message: "Ya existe un administrador registrado con este correo electrónico." });
     }
 
     // El token lleva todo lo necesario para el registro, excepto la
@@ -57,6 +57,7 @@ inviteAdminController.sendInvitation = async (req, res) => {
 
     const invitationLink = `${config.frontendUrl}/admin/accept-invitation?token=${invitationToken}`;
 
+    // Le mandamos el correo con el enlace antes de confirmar nada al admin
     await emailUtils.sendEmail(
       email,
       "Has sido invitado a SYSCOR",
@@ -75,10 +76,10 @@ inviteAdminController.sendInvitation = async (req, res) => {
       entity: { model: "Admin", id: null, label: normalizedEmail },
     });
 
-    return res.status(200).json({ message: "Invitation sent successfully." });
+    return res.status(200).json({ title: "Invitación enviada", message: "La invitación se envió correctamente al correo indicado." });
   } catch (error) {
     console.error("inviteAdminController.sendInvitation:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al enviar la invitación." });
   }
 };
 
@@ -92,14 +93,14 @@ inviteAdminController.validateInvitation = async (req, res) => {
   const { token } = req.query;
 
   if (!token) {
-    return res.status(400).json({ message: "Invitation token is required." });
+    return res.status(400).json({ title: "Token requerido", message: "El token de invitación es requerido." });
   }
 
   try {
     const decoded = emailUtils.verifyToken(token);
 
     if (!decoded.invited || decoded.role !== "admin") {
-      return res.status(400).json({ message: "Invalid invitation token." });
+      return res.status(400).json({ title: "Token inválido", message: "El token de invitación no es válido." });
     }
 
     return res.status(200).json({
@@ -107,11 +108,12 @@ inviteAdminController.validateInvitation = async (req, res) => {
       personalInfo: decoded.personalInfo,
     });
   } catch (error) {
+    // Si el token venció, se lo decimos explícito para que pida uno nuevo
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "This invitation has expired. Ask an administrator to send a new one." });
+      return res.status(401).json({ title: "Invitación expirada", message: "Esta invitación ya venció. Pide a un administrador que envíe una nueva." });
     }
     console.error("inviteAdminController.validateInvitation:", error);
-    return res.status(400).json({ message: "Invalid or corrupted invitation token." });
+    return res.status(400).json({ title: "Token inválido", message: "El token de invitación no es válido o está dañado." });
   }
 };
 
@@ -128,21 +130,22 @@ inviteAdminController.validateInvitation = async (req, res) => {
 inviteAdminController.acceptInvitation = async (req, res) => {
   const { token, password } = req.body;
 
+  // La contraseña la escribe el invitado en este paso, así que se valida aquí
   const passwordValidation = utils.validatePassword(password);
   if (!passwordValidation.valid) {
-    return res.status(400).json({ message: passwordValidation.message });
+    return res.status(400).json({ title: "Contraseña inválida", message: passwordValidation.message });
   }
 
   try {
     const decoded = emailUtils.verifyToken(token);
 
     if (!decoded.invited || decoded.role !== "admin") {
-      return res.status(400).json({ message: "Invalid invitation token." });
+      return res.status(400).json({ title: "Token inválido", message: "El token de invitación no es válido." });
     }
 
-    const exists = await adminModel.findOne({ "loginInfo.email": decoded.email });
+    const exists = await AdminModel.findOne({ "loginInfo.email": decoded.email });
     if (exists) {
-      return res.status(409).json({ message: "An administrator with this email already exists." });
+      return res.status(409).json({ title: "Administrador ya existe", message: "Ya existe un administrador registrado con este correo electrónico." });
     }
 
     const bcryptjs = (await import("bcryptjs")).default;
@@ -153,7 +156,7 @@ inviteAdminController.acceptInvitation = async (req, res) => {
     // y la imagen quedará en null sin lanzar ningún error.
     const imageUrl = req.file ? req.file.path : null;
 
-    const newAdmin = new adminModel({
+    const newAdmin = new AdminModel({
       personalInfo: {
         name: decoded.personalInfo.name,
         lastname: decoded.personalInfo.lastname,
@@ -195,13 +198,13 @@ inviteAdminController.acceptInvitation = async (req, res) => {
       },
     });
 
-    return res.status(201).json({ message: "Administrator account created successfully." });
+    return res.status(201).json({ title: "Cuenta creada", message: "La cuenta del administrador se creó correctamente." });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "This invitation has expired. Ask an administrator to send a new one." });
+      return res.status(401).json({ title: "Invitación expirada", message: "Esta invitación ya venció. Pide a un administrador que envíe una nueva." });
     }
     console.error("inviteAdminController.acceptInvitation:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({ title: "Error del servidor", message: "No se pudo crear la cuenta del administrador." });
   }
 };
 

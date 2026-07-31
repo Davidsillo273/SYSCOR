@@ -13,7 +13,7 @@ settingsController.getSettings = async (req, res) => {
     return res.status(200).json(settings);
   } catch (error) {
     console.error("settingsController.getSettings:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
@@ -34,7 +34,7 @@ settingsController.updateSettings = async (req, res) => {
           if (lowStockThresholds[section] !== undefined) {
             const threshold = Number(lowStockThresholds[section]);
             if (isNaN(threshold) || threshold < 0) {
-              return res.status(400).json({ message: `Low stock threshold for ${section} must be a positive number.` });
+              return res.status(400).json({ title: "Umbral inválido", message: `El umbral de stock bajo para ${section} debe ser un número positivo.` });
             }
             settings.operation.lowStockThresholds[section] = threshold;
           }
@@ -49,7 +49,7 @@ settingsController.updateSettings = async (req, res) => {
         const seconds = Number(dashboardRefreshSeconds);
         // Menos de 10 segundos saturaría el servidor con recargas innecesarias
         if (isNaN(seconds) || seconds < 10) {
-          return res.status(400).json({ message: "Refresh interval must be at least 10 seconds." });
+          return res.status(400).json({ title: "Intervalo inválido", message: "El intervalo de actualización debe ser de al menos 10 segundos." });
         }
         settings.operation.dashboardRefreshSeconds = seconds;
       }
@@ -79,10 +79,10 @@ settingsController.updateSettings = async (req, res) => {
       entity: { model: "Settings", id: settings._id, label: "Ajustes" },
     });
 
-    return res.status(200).json({ message: "Settings updated successfully", data: settings });
+    return res.status(200).json({ title: "Ajustes actualizados", message: "La configuración se actualizó correctamente.", data: settings });
   } catch (error) {
     console.error("settingsController.updateSettings:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
   }
 };
 
