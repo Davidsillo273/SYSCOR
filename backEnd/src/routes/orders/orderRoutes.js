@@ -11,6 +11,6 @@ router.get("/", orderController.getOrders);
 router.put("/:id/status", orderController.updateOrderStatus);
 router.delete("/:id", orderController.deleteOrder);
 
-router.get('/waiter/dashboard', validateAuthCookie, orderController.getWaiterDashboard);
+router.get('/waiter/dashboard', validateAuthCookie(["employee"]), orderController.getWaiterDashboard);
 
 export default router;
