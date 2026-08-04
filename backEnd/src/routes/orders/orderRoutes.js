@@ -6,10 +6,10 @@ const router = Router();
 
 router.use(validateAuthCookie);
 
-router.post("/", orderController.createOrder);
+router.post("/", validateAuthCookie(["employee", "admin"]),orderController.createOrder);
 router.get("/", orderController.getOrders);
-router.put("/:id/status", orderController.updateOrderStatus);
-router.delete("/:id", orderController.deleteOrder);
+router.put("/:id/status", validateAuthCookie(["employee", "admin"]),orderController.updateOrderStatus);
+router.delete("/:id", validateAuthCookie(["admin"]), orderController.deleteOrder);
 
 router.get('/waiter/dashboard', validateAuthCookie(["employee"]), orderController.getWaiterDashboard);
 
