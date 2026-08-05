@@ -32,11 +32,14 @@ authMeController.getMe = async (req, res) => {
     return res.status(200).json({
       id: user._id,
       role,
-      // NUEVO: el puesto específico, solo aplica a empleados
       type: role === "employee" ? user.personalInfo?.type : undefined,
+      email: user.loginInfo?.email,
       name: user.personalInfo?.name,
       lastname: user.personalInfo?.lastname,
       image: user.personalInfo?.image || null,
+      // Info completa, solo para empleados (es su propio perfil, no hay problema en mostrarla)
+      personalInfo: role === "employee" ? user.personalInfo : undefined,
+      workInfo: role === "employee" ? user.workInfo : undefined,
       permissions: role === "employee" ? user.permissions : undefined,
     });
   } catch (error) {
