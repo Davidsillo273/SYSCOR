@@ -7,11 +7,11 @@ const router = express.Router();
 router
   .route("/")
   .get(tablesController.getTables)
-  .post(tablesController.insertTable);
+  .post(validateAuthCookie(["employee", "admin"]), tablesController.insertTable);
 
 router
   .route("/:id")
-  .patch(tablesController.updateTable) 
-  .delete(tablesController.deleteTable);
+  .put(validateAuthCookie(["employee", "admin"]), tablesController.updateTable)
+  .delete(validateAuthCookie(["admin"]), tablesController.deleteTable);
 
 export default router;
