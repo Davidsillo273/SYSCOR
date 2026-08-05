@@ -20,7 +20,7 @@ const orderItemSchema = new Schema({
 const orderSchema = new Schema({
   table: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Table",
+    ref: "Tables", 
     required: true
   },
   waiter: {
