@@ -4,8 +4,6 @@ import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
 
 const router = Router();
 
-router.use(validateAuthCookie);
-
 router.post("/", validateAuthCookie(["employee", "admin"]),orderController.createOrder);
 router.get("/", orderController.getOrders);
 router.put("/:id/status", validateAuthCookie(["employee", "admin"]),orderController.updateOrderStatus);
