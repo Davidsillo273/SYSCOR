@@ -11,7 +11,7 @@ orderController.createOrder = async (req, res) => {
     const { table, items } = req.body;
     const waiter = req.user.id;
 
-    const tableDoc = await Table.findById(table);
+    const tableDoc = await TablesModel.findById(table);
     if (!tableDoc) return res.status(404).json({ message: "Mesa no encontrada" });
 
     // Solo se pueden crear órdenes si la mesa está ocupada
