@@ -1,5 +1,8 @@
 import mongoose, { Schema, model } from "mongoose";
 
+// Un producto dentro de un pedido (combo, extra o bebida), con los datos ya
+// "congelados" al momento de pedirse (nombre/precio) para que si el producto
+// cambia de precio después, el pedido histórico no se vea afectado.
 const orderItemSchema = new Schema({
   itemType: {
     type: String,
@@ -11,30 +14,93 @@ const orderItemSchema = new Schema({
     required: true,
     refPath: 'itemType' // 'combo' -> Combos, 'extra' -> Extras, 'drink' -> Drinks
   },
-  name: String,   // snapshot del nombre
-  price: Number,  // snapshot del precio
+  name: String,
+  price: Number,
   quantity: { type: Number, default: 1 },
-  notes: String   // ej: "sin cebolla"
+  notes: String
 });
 
+// ORDER: el registro operativo de un pedido mientras se está preparando y
+// sirviendo/despachando. Es distinto del Carrito (colección "carts", el
+// borrador de compra antes de confirmar) y de la Factura (colección
+// "invoices", el registro de facturación que se genera solo cuando el
+// pedido se entrega, ver invoiceController.js).
+//
+// Un pedido puede nacer de dos formas distintas, controladas por "orderType":
+//   - "local": lo toma un mesero en el restaurante. Lleva mesa + mesero.
+//   - "online": lo hace el cliente desde la web/app. Lleva cliente + si es a
+//     domicilio o para recoger, y su método de pago.
+// Igual que Inventario separa "producto" de "activo_fijo" con un campo
+// itemType en un solo esquema (en vez de dos colecciones), aquí seguimos el
+// mismo patrón con orderType: un solo esquema flexible, validado según el
+// tipo en el controlador (ver orderController.createOrder).
 const orderSchema = new Schema({
+  orderType: {
+    type: String,
+    enum: ['local', 'online'],
+    required: true
+  },
+
+  // --- Campos exclusivos de pedidos LOCALES (dine-in) ---
   table: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Tables", 
-    required: true
+    ref: "Tables"
   },
   waiter: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Employee",
-    required: true
+    ref: "Employee"
   },
+
+  // --- Campos exclusivos de pedidos EN LÍNEA ---
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Customer"
+  },
+  // true = se lleva a domicilio, false = el cliente pasa a recogerlo al local.
+  // Solo aplica a pedidos "online" (un pedido local siempre es "en el local").
+  isDelivery: { type: Boolean },
+  // Dirección de entrega. Solo obligatoria cuando isDelivery es true.
+  deliveryAddress: { type: String },
+  paymentMethod: {
+    type: String,
+    enum: ['card', 'cash']
+  },
+
+  // --- Campos compartidos por ambos tipos ---
   items: [orderItemSchema],
   total: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ['pending', 'preparing', 'ready', 'delivered', 'cancelled'],
+    // "atrasado" lo asigna el sistema solo cuando un pedido lleva más de 1
+    // hora en "preparing" sin pasar a "ready" (ver orderController.flagDelayedOrders).
+    //
+    // OJO con la diferencia entre "ready" y "delivered", no son lo mismo:
+    //   - "ready": el pedido ya está listo para salir de cocina. En un pedido
+    //     local significa "listo para llevar a la mesa"; en uno online
+    //     significa "listo para despacharlo a domicilio o para que el
+    //     cliente pase a recogerlo".
+    //   - "delivered": el pedido ya llegó a su destino final. En local es
+    //     "ya se sirvió en la mesa"; en online es "ya se entregó en el
+    //     domicilio" o "el cliente ya lo recogió" (lo distingue isDelivery).
+    enum: ['pending', 'preparing', 'ready', 'delivered', 'cancelled', 'atrasado'],
     default: 'pending'
-  }
-}, { timestamps: true });
+  },
+  // Historial de cambios de estado: de aquí se calcula el tiempo promedio de
+  // preparación (preparing -> ready), el tráfico de pedidos por hora, y
+  // permite detectar cuándo empezó a estar "atrasado".
+  statusHistory: [
+    {
+      status: { type: String },
+      changedAt: { type: Date, default: Date.now }
+    }
+  ]
+}, {
+  timestamps: true,
+  // Se deja explícito el nombre de la colección porque este modelo viene de
+  // ampliar el antiguo Order (que solo manejaba pedidos locales) para que
+  // también maneje pedidos online. La colección física se queda llamándose
+  // "orders" para no perder los pedidos ya existentes ni requerir mover datos.
+  collection: "orders"
+});
 
 export default model("Order", orderSchema);

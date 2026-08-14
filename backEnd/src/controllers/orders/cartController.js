@@ -206,7 +206,8 @@ cartController.insertCart = async (req, res) => {
       table: table || null,
       details: processedDetails,
       total: totalGeneral,
-      status
+      status,
+      statusHistory: [{ status: status || 'pending', changedAt: new Date() }]
     });
 
     await newCart.save();
@@ -311,9 +312,16 @@ cartController.updateCart = async (req, res) => {
     // Guardamos el estado anterior para poder detectar si el pedido cambió de fase
     const previousCart = await CartModel.findById(req.params.id).select("status table inventoryDeducted");
 
+    // Cuando el estado cambia, dejamos rastro en statusHistory para poder calcular
+    // después el tiempo promedio de preparación (cooking -> ready) y el tráfico por hora
+    const mongoUpdate = { $set: updateData };
+    if (status !== undefined && previousCart?.status !== status) {
+      mongoUpdate.$push = { statusHistory: { status, changedAt: new Date() } };
+    }
+
     const updatedCart = await CartModel.findByIdAndUpdate(
       req.params.id,
-      updateData,
+      mongoUpdate,
       { new: true }
     );
 

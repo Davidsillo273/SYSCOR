@@ -17,7 +17,7 @@ import settingsRoutes from "../settings/settingsRoutes.js";
 import aiRoutes from "../ai/aiRoutes.js";
 import saucerChatRoutes from "../chat/saucerChatRoutes.js";
 import orderRoutes from "../orders/orderRoutes.js";
-import kitchenRoutes from "../orders/kitchenRoutes.js";
+import invoiceRoutes from "../orders/invoiceRoutes.js";
 
 
 
@@ -55,11 +55,13 @@ router.use("/menu/saucers", saucerRouters);
 router.use("/menu/combos", combosRouters);
 router.use("/menu/drink-sets", drinkSetsRouters);
 
-// Pedidos: carritos y pagos viven bajo /orders
+// Pedidos: carrito (borrador de compra), pedidos (comandas) y pagos viven bajo /orders.
+// La facturación (colección "invoices", generada automáticamente cuando un
+// pedido se entrega) vive aparte, en /invoices.
 router.use("/orders/carts", cartRoutes);
 router.use("/orders", orderRoutes);
-router.use("/kitchen", kitchenRoutes);
 router.use("/orders/wompi", wompiRoutes);
+router.use("/invoices", invoiceRoutes);
 
 // Usuarios administrativos: admins, empleados y clientes viven bajo /users
 router.use("/users/customers", customerRoutes);

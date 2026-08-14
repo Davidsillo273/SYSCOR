@@ -61,6 +61,14 @@ const cartSchema = new Schema({
     status: {
         type: String
     },
+    // Historial de cambios de estado, para poder calcular tiempos de preparación
+    // (ej: cuánto pasa entre "cooking" y "ready") y tráfico de pedidos por hora
+    statusHistory: [
+        {
+            status: { type: String },
+            changedAt: { type: Date, default: Date.now }
+        }
+    ],
     // true cuando ya se descontó el inventario de esta orden (combos->platillos
     // y extras). Evita que un ciclo cooking->ready->cooking descuente dos veces.
     inventoryDeducted: {
