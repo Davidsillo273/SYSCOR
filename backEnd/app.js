@@ -18,10 +18,25 @@ const app = express();
 // --- Middlewares ---
 // Los middlewares son como filtros que procesan la información antes de llegar a las rutas
 
+// Orígenes permitidos por CORS. FRONTEND_URL admite varias URLs separadas por
+// coma (ej. producción y previews de Vercel) para no limitarnos a un solo dominio.
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    ...(process.env.FRONTEND_URL?.split(",").map((url) => url.trim()) || []),
+];
+
 // Configuramos CORS para permitir que el frontend se comunique con nuestro backend
 app.use(cors({
     // Definimos qué orígenes tienen permiso para hacer peticiones
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: (origin, callback) => {
+        // Sin header Origin (ej. Postman, curl, peticiones same-origin): se permite
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`Origen no permitido por CORS: ${origin}`));
+        }
+    },
     // Permitimos el envío de credenciales como las cookies
     credentials: true,
 }));
