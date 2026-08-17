@@ -16,10 +16,14 @@ export const config = {
     jwt: {
         secret: process.env.JWT_Secret_key
     },
-    // Cuenta de correo desde la que el sistema manda los emails (códigos, invitaciones, etc.)
-    email: {
-        userEmail: process.env.USER_EMAIL,
-        userPassword: process.env.USER_PASSWORD
+    // Credenciales de Mailjet, el servicio con el que el sistema manda los
+    // emails (códigos, invitaciones, etc.) vía su API HTTP. Reemplaza a
+    // Nodemailer porque Render bloquea los puertos SMTP en producción
+    mailjet: {
+        apiKey: process.env.API_KEY_MAILJET,
+        secretKey: process.env.API_SECRET_MAILJET,
+        fromEmail: process.env.MAILJET_FROM_EMAIL,
+        fromName: process.env.MAILJET_FROM_NAME
     },
     // Credenciales de Cloudinary, el servicio donde guardamos las imágenes que suben los admins
     cloudinary: {

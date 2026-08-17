@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import Mailjet from "node-mailjet";
 import crypto from "crypto";
 import jsonwebtoken from "jsonwebtoken";
 import { config } from "../../../config.js";
@@ -18,28 +18,33 @@ const verifyToken = (token) => {
 };
 
 // ─── Mailer ──────────────────────────────────────────────────────────────────
+// Usamos la API HTTP de Mailjet en vez de Nodemailer/SMTP porque Render
+// bloquea los puertos 465 y 587 en producción.
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: config.email.userEmail,
-    pass: config.email.userPassword,
-  },
-});
+const mailjet = Mailjet.apiConnect(
+  config.mailjet.apiKey,
+  config.mailjet.secretKey
+);
 
 const sendEmail = async (to, subject, html) => {
-  const mailOptions = {
-    from: `"SYSCOR – Taquería El Corral" <${config.email.userEmail}>`,
-    to,
-    subject,
-    html,
-  };
-
   try {
-    const info = await transporter.sendMail(mailOptions);
-    return info;
+    const result = await mailjet.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: {
+            Email: config.mailjet.fromEmail,
+            Name: config.mailjet.fromName,
+          },
+          To: [{ Email: to }],
+          Subject: subject,
+          HTMLPart: html,
+        },
+      ],
+    });
+
+    return result.body;
   } catch (error) {
-    console.error("sendEmail error:", error);
+    console.error("sendEmail error:", error.response?.body || error.message);
     throw new Error("No se pudo enviar el correo de verificación.");
   }
 };
