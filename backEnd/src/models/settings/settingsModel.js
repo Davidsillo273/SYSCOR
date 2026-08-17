@@ -7,9 +7,10 @@ const settingsSchema = new Schema({
     // Ajustes del día a día de la operación
     operation: {
         // A partir de cuántas unidades se considera "agotado"/bajo stock,
-        // configurable por separado para cada sección del sistema.
+        // configurable por separado para cada sección del sistema. Inventario no
+        // tiene entrada aquí: su umbral es obligatorio por insumo (ver
+        // inventoryModel.lowStockAlert), así que no existe un umbral general.
         lowStockThresholds: {
-            inventory: { type: Number, default: 10 },
             drinks: { type: Number, default: 10 },
             saucers: { type: Number, default: 10 },
             extras: { type: Number, default: 10 },

@@ -130,4 +130,52 @@ tablesController.updateTable = async (req, res) => {
   }
 };
 
+// Pone el mismo estado a TODAS las mesas de una vez (ej. "poner disponibles
+// todas las mesas" al abrir el local). Igual que updateTable, si el nuevo
+// estado es 'libre' o 'limpieza' se cancelan los pedidos activos de las
+// mesas que estaban ocupadas, para no dejar comandas huérfanas.
+tablesController.bulkUpdateStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const validStatuses = ['libre', 'ocupada', 'limpieza', 'reservada'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ title: "Estado inválido", message: "El estado no es válido." });
+    }
+
+    const tables = await TablesModel.find().select("_id status");
+    if (tables.length === 0) {
+      return res.status(200).json({ title: "Sin mesas", message: "No hay mesas registradas.", data: { updated: 0 } });
+    }
+
+    if (['libre', 'limpieza'].includes(status)) {
+      const tableIdsChanging = tables.filter((t) => t.status !== status).map((t) => t._id);
+      if (tableIdsChanging.length > 0) {
+        await Order.updateMany(
+          { table: { $in: tableIdsChanging }, status: { $in: ['pending', 'preparing', 'ready'] } },
+          { $set: { status: 'cancelled' } }
+        );
+      }
+    }
+
+    await TablesModel.updateMany({}, { $set: { status } });
+
+    await notificationUtils.createNotification({
+      req,
+      category: "tables",
+      action: "status_changed",
+      title: "Todas las mesas actualizadas",
+      message: (actor) => `${actor.name} puso todas las mesas en estado "${status}"`,
+      icon: "chair",
+      severity: "info",
+      entity: { model: "Tables", id: null, label: "Todas las mesas" },
+    });
+
+    return res.status(200).json({ title: "Mesas actualizadas", message: "Se actualizó el estado de todas las mesas.", data: { updated: tables.length } });
+  } catch (error) {
+    console.error("tablesController.bulkUpdateStatus:", error);
+    return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno. Intenta de nuevo más tarde." });
+  }
+};
+
 export default tablesController;

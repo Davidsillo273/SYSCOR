@@ -61,7 +61,7 @@ inviteAdminController.sendInvitation = async (req, res) => {
     await emailUtils.sendEmail(
       email,
       "Has sido invitado a SYSCOR",
-      emailUtils.HTMLInvitationEmail(invitationLink, "Administrador")
+      emailUtils.htmlInvitationEmail(invitationLink, "Administrador")
     );
 
     await notificationUtils.createNotification({

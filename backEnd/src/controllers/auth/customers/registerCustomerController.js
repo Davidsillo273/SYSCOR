@@ -44,7 +44,7 @@ registerCustomerController.sendCode = async (req, res) => {
     await emailUtils.sendEmail(
       email,
       "Verifica tu cuenta – Taquería El Corral",
-      emailUtils.HTMLVerificationEmail(verificationCode)
+      emailUtils.htmlVerificationEmail(verificationCode)
     );
 
     return res.status(200).json({ title: "Código enviado", message: "Se envió un código de verificación a tu correo electrónico." });

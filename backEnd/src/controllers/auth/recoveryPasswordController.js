@@ -58,7 +58,7 @@ recoveryPasswordController.requestCode = async (req, res) => {
         await emailUtils.sendEmail(
             email,
             "SYSCOR - Recuperación de contraseña",
-            emailUtils.HTMLRecoveryEmail(code)
+            emailUtils.htmlRecoveryEmail(code)
         );
 
         res.cookie("recoveryCookie", token, { ...cookieConfig, maxAge: 15 * 60 * 1000 });

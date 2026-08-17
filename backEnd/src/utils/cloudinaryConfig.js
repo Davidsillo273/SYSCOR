@@ -22,4 +22,12 @@ const storage = new CloudinaryStorage({
 // Middleware que recibe el archivo que sube el usuario y lo manda a Cloudinary
 const upload = multer({ storage });
 
+// El chat de IA usa memoria en vez de subir directo a Cloudinary, porque
+// primero necesita el buffer crudo para mandarle la imagen a Gemini en base64
+// (ver assistantChatController.js). El propio cliente `cloudinary` configurado
+// arriba se reexporta para que ese controller pueda subir el archivo después,
+// una vez decide que vale la pena conservarlo.
+const uploadToMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
+
 export default upload;
+export { cloudinary, uploadToMemory };

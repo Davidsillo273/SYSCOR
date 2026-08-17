@@ -6,18 +6,18 @@ import InventoryModel from "../../models/inventory/inventoryModel.js";
 import InventoryLogsModel from "../../models/inventory/inventoryLogsModel.js";
 import SaucersModel from "../../models/menu/saucersModel.js";
 import notificationUtils from "../notifications/notificationUtils.js";
-import settingsUtils from "../settings/settingsUtils.js";
 import { convert } from "../units/unitsUtils.js";
 import { cascadeDisableCombos } from "../menu/cascadeUtils.js";
 
-// Revisa si un insumo quedó por debajo del mínimo (el propio del insumo, o si
-// no tiene, el general de Ajustes) y levanta una alerta. La usan tanto el
-// controlador de inventario (altas/ediciones manuales) como este servicio.
+// Revisa si un insumo quedó por debajo de su propio mínimo (lowStockAlert es
+// obligatorio por insumo, ver inventoryModel) y levanta una alerta. La usan
+// tanto el controlador de inventario (altas/ediciones manuales) como este servicio.
 export const notifyIfLowStock = async (req, product) => {
   try {
-    const settings = await settingsUtils.getOrCreateSettings();
-    const threshold =
-      product.lowStockAlert ?? settings.operation?.lowStockThresholds?.inventory ?? 10;
+    // Insumos antiguos que todavía no tengan el umbral definido (de antes de
+    // que fuera obligatorio) simplemente no generan esta alerta.
+    if (product.lowStockAlert === undefined || product.lowStockAlert === null) return;
+    const threshold = product.lowStockAlert;
 
     if (Number(product.quantity) > threshold) return;
 

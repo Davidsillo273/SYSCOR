@@ -15,7 +15,7 @@ import tablesRoutes from "../tables/tablesRoutes.js"
 import notificationsRoutes from "../notifications/notificationsRoutes.js";
 import settingsRoutes from "../settings/settingsRoutes.js";
 import aiRoutes from "../ai/aiRoutes.js";
-import saucerChatRoutes from "../chat/saucerChatRoutes.js";
+import assistantChatRoutes from "../chat/assistantChatRoutes.js";
 import orderRoutes from "../orders/orderRoutes.js";
 import invoiceRoutes from "../orders/invoiceRoutes.js";
 
@@ -73,7 +73,7 @@ router.use("/tables", tablesRoutes);
 router.use("/notifications", notificationsRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/ai", aiRoutes);
-router.use("/chat", saucerChatRoutes);
+router.use("/chat", assistantChatRoutes);
 
 //auth - customers
 router.use("/auth/customers/register", registerCustomerRoutes);

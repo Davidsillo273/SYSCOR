@@ -28,8 +28,10 @@ settingsController.updateSettings = async (req, res) => {
       const { lowStockThresholds, autoRefreshDashboard, dashboardRefreshSeconds } = operation;
 
       if (lowStockThresholds) {
-        // Cada sección tiene su propio umbral; solo se tocan las que vengan en el body
-        const sections = ["inventory", "drinks", "saucers", "extras", "combos"];
+        // Cada sección tiene su propio umbral; solo se tocan las que vengan en el body.
+        // "inventory" no está aquí: desde que el umbral es obligatorio por insumo, ya
+        // no existe un umbral general configurable para esa sección.
+        const sections = ["drinks", "saucers", "extras", "combos"];
         for (const section of sections) {
           if (lowStockThresholds[section] !== undefined) {
             const threshold = Number(lowStockThresholds[section]);

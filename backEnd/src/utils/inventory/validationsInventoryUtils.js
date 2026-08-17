@@ -1,5 +1,9 @@
 import { UNIT_LIST } from "../units/unitsUtils.js";
 
+// Validaciones para el inventario. A diferencia de los ítems de menú, no
+// delega en duplicateNameUtils porque varias reglas de aquí (categoría,
+// condición, unidad, umbral de alerta) dependen de itemType ("producto" vs
+// "activo_fijo"), algo que no aplica a combos/bebidas/extras/platillos.
 const validateName = (name) => {
   if (!name || typeof name !== "string") {
     return {
@@ -40,6 +44,7 @@ const validateUbication = (ubication) => {
   return { valid: true };
 };
 
+// Aplica tanto a productos (stock consumible) como a activos fijos (cantidad en existencia)
 const validateQuantity = (quantity) => {
   if (quantity === undefined || quantity === null || quantity === "") {
     return {
@@ -124,6 +129,31 @@ const validateUnit = (unit, itemType) => {
   return { valid: true };
 };
 
+// El umbral de alerta de stock es obligatorio para productos (cada insumo
+// define su propio mínimo, ya no existe un umbral general en Ajustes) y
+// admite decimales, porque hay insumos que se miden en unidades fraccionables
+// (kg, litros, etc.) donde "10" como mínimo no tiene sentido para todos.
+const validateLowStockAlert = (lowStockAlert, itemType) => {
+  if (itemType === "activo_fijo") return { valid: true };
+
+  if (lowStockAlert === undefined || lowStockAlert === null || lowStockAlert === "") {
+    return {
+      valid: false,
+      message: "El umbral de alerta de stock es requerido.",
+    };
+  }
+
+  const value = Number(lowStockAlert);
+  if (isNaN(value) || value < 0) {
+    return {
+      valid: false,
+      message: "El umbral de alerta de stock debe ser un número positivo.",
+    };
+  }
+
+  return { valid: true };
+};
+
 export default {
   validateName,
   validatePrice,
@@ -134,4 +164,5 @@ export default {
   validateCondition,
   validateStatus,
   validateUnit,
+  validateLowStockAlert,
 };

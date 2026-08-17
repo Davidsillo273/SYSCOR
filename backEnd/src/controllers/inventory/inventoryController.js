@@ -209,6 +209,11 @@ inventoryController.insertInventory = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    validation = validationsInventory.validateLowStockAlert(lowStockAlert, finalItemType);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     // Preparamos los datos del artículo nuevo
     const newInventory = new InventoryModel({
       name,
@@ -221,10 +226,7 @@ inventoryController.insertInventory = async (req, res) => {
       unit: finalItemType === "producto" ? unit : undefined,
       condition: finalItemType === "activo_fijo" ? condition : undefined,
       acquisitionDate: finalItemType === "activo_fijo" && acquisitionDate ? acquisitionDate : undefined,
-      lowStockAlert:
-        finalItemType === "producto" && lowStockAlert !== undefined && lowStockAlert !== ""
-          ? Number(lowStockAlert)
-          : undefined,
+      lowStockAlert: finalItemType === "producto" ? Number(lowStockAlert) : undefined,
       ...(req.file ? { image: req.file.path, publicId: req.file.filename } : {}),
     });
 
@@ -360,6 +362,11 @@ inventoryController.updateInventory = async (req, res) => {
       return res.status(400).json({message: validation.message,});
     }
 
+    validation = validationsInventory.validateLowStockAlert(lowStockAlert, finalItemType);
+    if (!validation.valid) {
+      return res.status(400).json({message: validation.message,});
+    }
+
     // Si todo es válido, buscamos el producto original para comprobar que existe
     const inventoryFound = await InventoryModel.findById(req.params.id);
 
@@ -380,10 +387,7 @@ inventoryController.updateInventory = async (req, res) => {
       unit: finalItemType === "producto" ? unit : undefined,
       condition: finalItemType === "activo_fijo" ? condition : undefined,
       acquisitionDate: finalItemType === "activo_fijo" && acquisitionDate ? acquisitionDate : undefined,
-      lowStockAlert:
-        finalItemType === "producto" && lowStockAlert !== undefined && lowStockAlert !== ""
-          ? Number(lowStockAlert)
-          : undefined,
+      lowStockAlert: finalItemType === "producto" ? Number(lowStockAlert) : undefined,
       pending: false,
     };
 

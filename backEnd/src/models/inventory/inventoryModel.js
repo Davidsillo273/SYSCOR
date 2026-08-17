@@ -68,10 +68,14 @@ const inventorySchema = new Schema({
         type: Boolean,
         default: false
     },
-    // Umbral de alerta propio de este insumo. Si no se define, se usa el
-    // umbral general de la sección (Ajustes > Inventario). Solo aplica a "producto"
+    // Umbral de alerta propio de este insumo (obligatorio para "producto": ya
+    // no existe un umbral general en Ajustes, cada insumo define el suyo según
+    // su propia unidad de medida). Admite decimales (ej. 0.5 kg).
     lowStockAlert: {
-        type: Number
+        type: Number,
+        required: function () {
+            return this.itemType === "producto" && !this.pending;
+        }
     }
 },
 {

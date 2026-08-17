@@ -6,6 +6,8 @@ import Drinks from "../../models/menu/drinksModel.js";
 import Extras from "../../models/menu/extrasModel.js";
 import TablesModel from "../../models/tables/tablesModel.js";
 import AdminModel from "../../models/users/adminModel.js";
+import CustomerModel from "../../models/users/customerModel.js";
+import EmployeeModel from "../../models/users/employeeModel.js";
 
 const orderController = {};
 
@@ -66,7 +68,7 @@ orderController.createOrder = async (req, res) => {
     const orderFields = { orderType };
 
     if (orderType === 'local') {
-      const { table } = req.body;
+      const { table, localCustomerName, paymentMethod } = req.body;
       const waiter = req.user.id;
 
       if (!table) return res.status(400).json({ message: "La mesa es obligatoria en pedidos locales" });
@@ -79,20 +81,51 @@ orderController.createOrder = async (req, res) => {
         return res.status(400).json({ message: "Solo se pueden tomar pedidos en mesas ocupadas" });
       }
 
+      // Un pedido local solo admite pago con tarjeta o efectivo en caja
+      if (paymentMethod && !['card', 'cash'].includes(paymentMethod)) {
+        return res.status(400).json({ message: "El método de pago debe ser 'card' o 'cash' en pedidos locales" });
+      }
+
       orderFields.table = table;
       orderFields.waiter = waiter;
+      orderFields.localCustomerName = localCustomerName?.trim() || undefined;
+      orderFields.paymentMethod = paymentMethod || 'cash';
     } else {
-      const { customer, isDelivery, deliveryAddress, paymentMethod } = req.body;
+      const {
+        customer, isDelivery, deliveryAddress, paymentMethod,
+        contact, receivedBy, scheduledFor,
+      } = req.body;
 
       if (!customer) return res.status(400).json({ message: "El cliente es obligatorio en pedidos en línea" });
       if (isDelivery && !deliveryAddress) {
         return res.status(400).json({ message: "La dirección de entrega es obligatoria para pedidos a domicilio" });
       }
+      if (paymentMethod && !['cash', 'card_on_delivery', 'online'].includes(paymentMethod)) {
+        return res.status(400).json({ message: "Método de pago inválido para un pedido en línea" });
+      }
+
+      // La información de contacto se precarga del cliente, pero se puede
+      // sobrescribir manualmente desde el body (ej. otro correo de contacto)
+      let contactInfo = contact;
+      if (!contactInfo) {
+        const customerDoc = await CustomerModel.findById(customer).select("personalInfo loginInfo.email");
+        if (customerDoc) {
+          contactInfo = {
+            name: customerDoc.personalInfo?.name || '',
+            lastname: customerDoc.personalInfo?.lastname || '',
+            email: customerDoc.loginInfo?.email || '',
+          };
+        }
+      }
 
       orderFields.customer = customer;
+      orderFields.contact = contactInfo;
       orderFields.isDelivery = !!isDelivery;
       orderFields.deliveryAddress = isDelivery ? deliveryAddress : undefined;
+      orderFields.scheduledFor = scheduledFor ? new Date(scheduledFor) : null;
+      orderFields.receivedBy = receivedBy?.name ? { name: receivedBy.name.trim(), lastname: (receivedBy.lastname || '').trim() } : undefined;
       orderFields.paymentMethod = paymentMethod || 'cash';
+      orderFields.paymentStatus = paymentMethod === 'online' ? 'paid' : 'pending';
     }
 
     // Procesar items (igual para ambos tipos: se busca el producto real para
@@ -160,6 +193,8 @@ orderController.getOrders = async (req, res) => {
     if (req.query.waiter) filter.waiter = req.query.waiter;
     if (req.query.status) filter.status = req.query.status;
     if (req.query.orderType) filter.orderType = req.query.orderType;
+    // Pedidos programados: los que tienen una fecha/hora futura para prepararse
+    if (req.query.scheduled === 'true') filter.scheduledFor = { $ne: null };
 
     const orders = await Order.find(filter)
       .populate('table', 'number status')
@@ -209,6 +244,31 @@ orderController.updateOrderStatus = async (req, res) => {
     return res.status(200).json({ message: "Order updated", data: order });
   } catch (error) {
     console.error("Error updating order:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Actualiza solo el estado de pago de un pedido (ej. marcar como "paid" un
+// pago contraentrega una vez que el mesero/repartidor lo cobra).
+orderController.updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+    if (!['pending', 'paid'].includes(paymentStatus)) {
+      return res.status(400).json({ message: "El estado de pago debe ser 'pending' o 'paid'" });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { $set: { paymentStatus } },
+      { new: true }
+    ).populate('table', 'number status')
+     .populate('waiter', 'name lastname')
+     .populate('customer', 'personalInfo');
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    return res.status(200).json({ message: "Estado de pago actualizado", data: order });
+  } catch (error) {
+    console.error("Error updating payment status:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -267,6 +327,119 @@ orderController.deleteOrder = async (req, res) => {
   }
 };
 
+// Clientes destacados (apartado de Clientes): tres rankings distintos, todos
+// basados en pedidos en línea ya entregados (los locales no llevan cliente
+// con cuenta, los anota el mesero como texto libre).
+orderController.getCustomerLeaderboard = async (req, res) => {
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startOfWeek = new Date(now);
+    const dow = startOfWeek.getDay();
+    startOfWeek.setDate(startOfWeek.getDate() - (dow === 0 ? 6 : dow - 1));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const baseMatch = { orderType: 'online', status: 'delivered', customer: { $ne: null } };
+
+    const [mostActiveRows, topSpendersRows, priciestWeekOrders] = await Promise.all([
+      Order.aggregate([
+        { $match: { ...baseMatch, createdAt: { $gte: sevenDaysAgo } } },
+        { $group: { _id: '$customer', orderCount: { $sum: 1 }, totalSpent: { $sum: '$total' } } },
+        { $sort: { orderCount: -1, totalSpent: -1 } },
+        { $limit: 10 },
+      ]),
+      Order.aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$customer', orderCount: { $sum: 1 }, totalSpent: { $sum: '$total' } } },
+        { $sort: { totalSpent: -1 } },
+        { $limit: 10 },
+      ]),
+      Order.find({ ...baseMatch, createdAt: { $gte: startOfWeek } })
+        .sort({ total: -1 })
+        .limit(10)
+        .populate('customer', 'personalInfo loginInfo.email')
+        .select('total createdAt customer'),
+    ]);
+
+    // El aggregate no puede usar populate: se resuelven los clientes aparte
+    const populateGroup = async (rows) => {
+      const ids = rows.map((r) => r._id).filter(Boolean);
+      const customers = await CustomerModel.find({ _id: { $in: ids } }).select('personalInfo loginInfo.email');
+      const map = new Map(customers.map((c) => [c._id.toString(), c]));
+      return rows
+        .map((r) => ({
+          customer: map.get(r._id?.toString()) || null,
+          orderCount: r.orderCount,
+          totalSpent: r.totalSpent,
+        }))
+        .filter((r) => r.customer);
+    };
+
+    const [mostActive, topSpenders] = await Promise.all([
+      populateGroup(mostActiveRows),
+      populateGroup(topSpendersRows),
+    ]);
+
+    return res.status(200).json({
+      mostActive,
+      topSpenders,
+      priciestWeek: priciestWeekOrders.filter((o) => o.customer),
+    });
+  } catch (error) {
+    console.error("Error en getCustomerLeaderboard:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Empleados destacados: quién vendió más (pedidos locales entregados),
+// filtrable por día/semana/mes.
+orderController.getEmployeeLeaderboard = async (req, res) => {
+  try {
+    const period = ['day', 'month'].includes(req.query.period) ? req.query.period : 'week';
+    const now = new Date();
+    let start;
+    if (period === 'day') {
+      start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+    } else if (period === 'month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else {
+      start = new Date(now);
+      const dow = start.getDay();
+      start.setDate(start.getDate() - (dow === 0 ? 6 : dow - 1));
+      start.setHours(0, 0, 0, 0);
+    }
+
+    const rows = await Order.aggregate([
+      { $match: { orderType: 'local', status: 'delivered', waiter: { $ne: null }, createdAt: { $gte: start } } },
+      { $group: { _id: '$waiter', orderCount: { $sum: 1 }, totalSales: { $sum: '$total' } } },
+      { $sort: { totalSales: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const ids = rows.map((r) => r._id).filter(Boolean);
+    const employees = await EmployeeModel.find({ _id: { $in: ids } }).select('personalInfo.name personalInfo.lastname personalInfo.type personalInfo.image');
+    const map = new Map(employees.map((e) => [e._id.toString(), e]));
+
+    const topEmployees = rows
+      .map((r) => ({
+        employee: map.get(r._id?.toString()) || null,
+        orderCount: r.orderCount,
+        totalSales: r.totalSales,
+      }))
+      .filter((r) => r.employee);
+
+    return res.status(200).json({ period, topEmployees });
+  } catch (error) {
+    console.error("Error en getEmployeeLeaderboard:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Vista rápida para el mesero con sesión iniciada: todas las mesas del local,
+// cada una con sus pedidos locales activos (los que aún no llegan a
+// "delivered"/"cancelled") que él mismo tomó, para que sepa de un vistazo qué
+// mesas está atendiendo y en qué va cada pedido sin entrar a Pedidos y Órdenes.
 orderController.getWaiterDashboard = async (req, res) => {
   try {
     const waiterId = req.user.id; // o req.query.waiter si prefieres pasarlo explícito

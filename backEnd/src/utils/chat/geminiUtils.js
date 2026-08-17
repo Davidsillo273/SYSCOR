@@ -62,8 +62,15 @@ export const askGemini = async (prompt) => {
 // El `history` que devuelve siempre queda listo para la siguiente llamada:
 // para una function call, hay que completarlo con sendFunctionResult antes
 // de mostrarle algo más al usuario.
-export const handleChatWithTools = async ({ history = [], message, tools, systemPrompt }) => {
-  const contents = [...history, { role: "user", parts: [{ text: message }] }];
+export const handleChatWithTools = async ({ history = [], message, tools, systemPrompt, attachments = [] }) => {
+  // Las imágenes adjuntas se mandan como "inline_data" (base64) dentro de las
+  // mismas `parts` del mensaje del usuario: así Gemini las "ve" en el mismo
+  // turno en el que el admin las adjuntó, sin necesitar la Files API.
+  const imageParts = attachments
+    .filter((a) => a?.mimeType?.startsWith("image/") && a?.data)
+    .map((a) => ({ inline_data: { mime_type: a.mimeType, data: a.data } }));
+
+  const contents = [...history, { role: "user", parts: [{ text: message }, ...imageParts] }];
 
   const data = await callGeminiRaw({
     system_instruction: { parts: [{ text: systemPrompt }] },

@@ -50,20 +50,46 @@ const orderSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Employee"
   },
+  // Nombre del cliente o de la familia que anota el mesero al tomar el pedido
+  localCustomerName: { type: String },
 
   // --- Campos exclusivos de pedidos EN LÍNEA ---
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Customer"
   },
+  // Información de contacto del pedido: se precarga del cliente pero el
+  // cliente la puede editar manualmente al momento de pedir (ej. otro correo).
+  contact: {
+    name: { type: String },
+    lastname: { type: String },
+    email: { type: String },
+  },
   // true = se lleva a domicilio, false = el cliente pasa a recogerlo al local.
   // Solo aplica a pedidos "online" (un pedido local siempre es "en el local").
   isDelivery: { type: Boolean },
   // Dirección de entrega. Solo obligatoria cuando isDelivery es true.
   deliveryAddress: { type: String },
+  // Si se llena, el pedido queda programado para esa fecha/hora en vez de
+  // prepararse de inmediato (ver "Pedidos programados" en Orders.jsx).
+  scheduledFor: { type: Date, default: null },
+  // Si el pedido lo recibe alguien distinto al cliente (a domicilio o al
+  // pasar a recogerlo al local), solo se pide nombre y apellido de esa persona.
+  receivedBy: {
+    name: { type: String },
+    lastname: { type: String },
+  },
   paymentMethod: {
     type: String,
-    enum: ['card', 'cash']
+    // 'card' y 'cash' cubren pedidos locales (tarjeta o efectivo en caja).
+    // 'card_on_delivery' = tarjeta contraentrega, 'online' = ya pagado en
+    // línea al hacer el pedido; ambos exclusivos de pedidos online.
+    enum: ['card', 'cash', 'card_on_delivery', 'online']
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid'],
+    default: 'pending'
   },
 
   // --- Campos compartidos por ambos tipos ---

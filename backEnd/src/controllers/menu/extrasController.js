@@ -1,6 +1,6 @@
 const extrasController = {};
 
-// Importamos el modelo de los extras (complementos) y sus validaciones
+// Importamos el modelo de los extras (complementos, ej. "guacamole extra") y sus validaciones
 import ExtrasModel from "../../models/menu/extrasModel.js";
 import validationsExtras from "../../utils/extras/validationsExtrasUtils.js";
 import { v2 as cloudinary } from "cloudinary";
@@ -20,7 +20,8 @@ extrasController.checkName = async (req, res) => {
   }
 };
 
-// Los ingredientes llegan como FormData, así que viajan como string JSON
+// Los ingredientes (usados solo cuando isCompound es true) llegan como
+// FormData, así que viajan como string JSON
 const parseIngredients = (raw) => {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
@@ -110,6 +111,8 @@ extrasController.insertExtras = async (req, res) => {
     validation = validationsExtras.validateImage(req.file);
     if (!validation.valid) return res.status(400).json({message: validation.message});
 
+    // Si es compuesto (depende de insumos, ej. guacamole = aguacate + limón +
+    // sal), exige al menos un ingrediente; si no, no aplica esta regla
     validation = validationsExtras.validateIngredients(ingredients, compound);
     if (!validation.valid) return res.status(400).json({message: validation.message});
 

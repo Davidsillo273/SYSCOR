@@ -1,20 +1,8 @@
-const validateName = (name) => {
-  if (!name || typeof name !== "string") {
-    return {
-      valid: false,
-      message: "El nombre es requerido.",
-    };
-  }
+// Nombre y precio son reglas idénticas en todos los ítems de menú, ver
+// utils/common/duplicateNameUtils.js para la implementación compartida.
+import { validateItemName, validateItemPrice } from "../common/duplicateNameUtils.js";
 
-  if (name.trim().length < 3) {
-    return {
-      valid: false,
-      message: "El nombre debe tener al menos 3 caracteres.",
-    };
-  }
-
-  return { valid: true };
-};
+const validateName = validateItemName;
 
 const SAUCER_CATEGORIES = ["Burritos", "Tortas", "Tacos", "Sopas", "Especiales"];
 
@@ -29,16 +17,7 @@ const validateCategory = (category) => {
   return { valid: true };
 };
 
-const validatePrice = (price) => {
-  if (price === undefined || price === null || price === "") {
-    return {
-      valid: false,
-      message: "El precio es requerido.",
-    };
-  }
-
-  return { valid: true };
-};
+const validatePrice = validateItemPrice;
 
 const validateStatus = (status) => {
   if (!status || typeof status !== "string") {

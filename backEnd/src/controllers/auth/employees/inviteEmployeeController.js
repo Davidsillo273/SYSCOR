@@ -5,14 +5,19 @@ import utils from "../../../utils/auth/validationsUsersUtils.js";
 import invitationValidationsUtils from "../../../utils/auth/invitationValidationsUtils.js";
 import notificationUtils from "../../../utils/notifications/notificationUtils.js";
 import { config } from "../../../../config.js";
+import { isValidPermission } from "../../../constants/permissions.js";
+import { ensureAccessCodeIfNeeded } from "../../../utils/users/accessCodeUtils.js";
+import { calculatePayrollDeductions } from "../../../utils/users/payrollUtils.js";
 
 const inviteEmployeeController = {};
 
 /**
  * Un Admin invita a alguien a unirse como Empleado. A diferencia de la
  * invitación de Admin, acá ya se definen los datos laborales (tipo de
- * puesto, salario, AFP, etc.) porque eso lo decide el negocio, no el
- * empleado al registrarse.
+ * puesto, salario, etc.) porque eso lo decide el negocio, no el empleado al
+ * registrarse. AFP, ISSS y renta ya no se piden: son descuentos de ley con
+ * porcentajes fijos, se calculan automáticamente a partir del salario (ver
+ * utils/users/payrollUtils.js).
  */
 inviteEmployeeController.sendInvitation = async (req, res) => {
   const {
@@ -24,10 +29,12 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
     address,
     type,
     salary,
-    AFP,
-    rent,
     additionalPay,
     workInsurance,
+    workDays,
+    scheduleStart,
+    scheduleEnd,
+    permissions,
   } = req.body;
 
   // Revisamos todos los campos antes de mandar nada: si algo falla, avisamos apenas ese primer error
@@ -38,14 +45,19 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
     () => utils.validatePhone(phone),
     () => utils.validateAddress(address),
     () => invitationValidationsUtils.validateEmployeeType(type),
-    () => (AFP !== undefined ? utils.validatePositiveNumber(AFP, "El AFP") : { valid: true }),
-    () => (rent !== undefined ? utils.validatePositiveNumber(rent, "La renta") : { valid: true }),
+    () => utils.validatePositiveNumber(salary, "El salario"),
     () => (additionalPay !== undefined ? utils.validatePositiveNumber(additionalPay, "El pago adicional") : { valid: true }),
+    () =>
+      permissions === undefined || (Array.isArray(permissions) && permissions.every(isValidPermission))
+        ? { valid: true }
+        : { valid: false, message: "Uno o más permisos no existen en el catálogo del sistema." },
   ]);
 
   if (!validation.valid) {
     return res.status(400).json({ title: "Datos inválidos", message: validation.message });
   }
+
+  const { afp, isss, isr, netSalary } = calculatePayrollDeductions(salary);
 
   try {
     const normalizedEmail = email.toLowerCase().trim();
@@ -74,11 +86,16 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
         },
         workInfo: {
           salary: Number(salary),
-          AFP: Number(AFP) || 0,
-          rent: Number(rent) || 0,
+          AFP: afp,
+          isss,
+          rent: isr,
           additionalPay: Number(additionalPay) || 0,
           workInsurance: workInsurance === true || workInsurance === "true",
+          workDays: Array.isArray(workDays) ? workDays : [],
+          scheduleStart: scheduleStart || null,
+          scheduleEnd: scheduleEnd || null,
         },
+        permissions: Array.isArray(permissions) ? permissions : [],
       },
       "24h"
     );
@@ -89,7 +106,7 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
     await emailUtils.sendEmail(
       email,
       "Has sido invitado a SYSCOR",
-      emailUtils.HTMLInvitationEmail(invitationLink, "Empleado")
+      emailUtils.htmlInvitationEmail(invitationLink, "Empleado")
     );
 
     const typeLabel = notificationUtils.EMPLOYEE_TYPE_LABELS[type] || type;
@@ -106,7 +123,11 @@ inviteEmployeeController.sendInvitation = async (req, res) => {
       entity: { model: "Employee", id: null, label: normalizedEmail },
     });
 
-    return res.status(200).json({ title: "Invitación enviada", message: "La invitación se envió correctamente al correo indicado." });
+    return res.status(200).json({
+      title: "Invitación enviada",
+      message: "La invitación se envió correctamente al correo indicado.",
+      payroll: { grossSalary: Number(salary), afp, isss, isr, netSalary },
+    });
   } catch (error) {
     console.error("inviteEmployeeController.sendInvitation:", error);
     return res.status(500).json({ title: "Error del servidor", message: "Ocurrió un problema interno al enviar la invitación." });
@@ -212,15 +233,25 @@ inviteEmployeeController.acceptInvitation = async (req, res) => {
       workInfo: {
         salary: decoded.workInfo.salary,
         AFP: decoded.workInfo.AFP,
+        isss: decoded.workInfo.isss,
         rent: decoded.workInfo.rent,
         additionalPay: decoded.workInfo.additionalPay,
         workInsurance: decoded.workInfo.workInsurance,
+        workDays: decoded.workInfo.workDays || [],
+        scheduleStart: decoded.workInfo.scheduleStart || null,
+        scheduleEnd: decoded.workInfo.scheduleEnd || null,
         isAuthorized: true,
         status: "active",
       },
+      permissions: decoded.permissions || [],
     });
 
     await newEmployee.save();
+
+    // Ya tiene contraseña propia (recién la definió arriba): si el admin le
+    // asignó permisos desde la invitación, este es el momento de mandarle su
+    // código de acceso.
+    const accessCodeSent = await ensureAccessCodeIfNeeded(EmployeeModel, newEmployee);
 
     // Quien acepta la invitación todavía no tiene sesión, así que el actor es
     // la propia persona que acaba de registrarse.
@@ -246,7 +277,12 @@ inviteEmployeeController.acceptInvitation = async (req, res) => {
       },
     });
 
-    return res.status(201).json({ title: "Cuenta creada", message: "La cuenta del empleado se creó correctamente." });
+    return res.status(201).json({
+      title: "Cuenta creada",
+      message: "La cuenta del empleado se creó correctamente.",
+      hasPermissions: (newEmployee.permissions || []).length > 0,
+      accessCodeSent,
+    });
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ title: "Invitación expirada", message: "Esta invitación ya venció. Pide a un administrador que envíe una nueva." });

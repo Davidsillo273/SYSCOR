@@ -3,10 +3,11 @@
 // Se pueden deshabilitar pero nunca eliminar: si un combo ya usaba el
 // conjunto, no queremos que su referencia quede rota.
 import DrinkSetsModel from "../../models/menu/drinkSetsModel.js";
-import { findByNameInsensitive } from "../../utils/common/duplicateNameUtils.js";
+import { findByNameInsensitive, validateItemName } from "../../utils/common/duplicateNameUtils.js";
 
 const drinkSetsController = {};
 
+// Trae todos los conjuntos (activos e inactivos), para la pantalla de administración
 drinkSetsController.getAllDrinkSets = async (req, res) => {
   try {
     const sets = await DrinkSetsModel.find().sort({ createdAt: -1 }).populate("drinkIds");
@@ -28,6 +29,7 @@ drinkSetsController.getActiveDrinkSets = async (req, res) => {
   }
 };
 
+// Busca si ya existe un conjunto con ese nombre (sugerencia, no bloqueo)
 drinkSetsController.checkName = async (req, res) => {
   try {
     const existing = await findByNameInsensitive(DrinkSetsModel, req.query.name);
@@ -38,12 +40,14 @@ drinkSetsController.checkName = async (req, res) => {
   }
 };
 
+// Crea un nuevo conjunto de bebidas (nace activo por default en el schema)
 drinkSetsController.insertDrinkSet = async (req, res) => {
   try {
     const { name, drinkIds } = req.body;
 
-    if (!name || typeof name !== "string" || name.trim().length < 3) {
-      return res.status(400).json({ title: "Nombre inválido", message: "El nombre debe tener al menos 3 caracteres." });
+    const nameValidation = validateItemName(name);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ title: "Nombre inválido", message: nameValidation.message });
     }
     if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
       return res.status(400).json({ title: "Bebidas requeridas", message: "Selecciona al menos una bebida para el conjunto." });
@@ -59,17 +63,21 @@ drinkSetsController.insertDrinkSet = async (req, res) => {
   }
 };
 
+// Actualiza nombre y/o bebidas de un conjunto existente, y opcionalmente su estado
 drinkSetsController.updateDrinkSet = async (req, res) => {
   try {
     const { name, drinkIds, status } = req.body;
 
-    if (!name || typeof name !== "string" || name.trim().length < 3) {
-      return res.status(400).json({ title: "Nombre inválido", message: "El nombre debe tener al menos 3 caracteres." });
+    const nameValidation = validateItemName(name);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ title: "Nombre inválido", message: nameValidation.message });
     }
     if (!Array.isArray(drinkIds) || drinkIds.length === 0) {
       return res.status(400).json({ title: "Bebidas requeridas", message: "Selecciona al menos una bebida para el conjunto." });
     }
 
+    // El estado es opcional aquí y solo se aplica si viene un valor reconocido:
+    // esta ruta también se usa para simplemente editar nombre/bebidas sin tocar el estado
     const updatedData = { name, drinkIds };
     if (status && ["activo", "inactivo"].includes(status)) {
       updatedData.status = status;

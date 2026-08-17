@@ -46,7 +46,7 @@ const sendEmail = async (to, subject, html) => {
 
 // ─── HTML Templates ──────────────────────────────────────────────────────────
 
-const HTMLVerificationEmail = (code) => `
+const htmlVerificationEmail = (code) => `
 <!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -92,7 +92,7 @@ const HTMLVerificationEmail = (code) => `
 </html>
 `;
 
-const HTMLRecoveryEmail = (code) => `
+const htmlRecoveryEmail = (code) => `
 <!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -139,6 +139,60 @@ const HTMLRecoveryEmail = (code) => `
 `;
 
 /**
+ * Email con el código de acceso. Se manda una sola vez, cuando el empleado
+ * ya tiene contraseña propia Y el admin le otorgó al menos un permiso (ver
+ * employeeController.updateEmployee e inviteEmployeeController.acceptInvitation).
+ * Este código reemplaza al correo en el login: el empleado entra con
+ * código + contraseña en vez de correo + contraseña.
+ */
+const htmlAccessCodeEmail = (code) => `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0"
+               style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+          <tr>
+            <td style="background:#B22222;padding:32px;text-align:center;">
+              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;">🌮 SYSCOR</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Taquería El Corral</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 48px;text-align:center;">
+              <h2 style="margin:0 0 12px;color:#1a1a1a;font-size:20px;">Se te otorgaron permisos en el sistema</h2>
+              <p style="margin:0 0 32px;color:#555;font-size:15px;line-height:1.6;">
+                Usa este código de acceso junto con tu contraseña para iniciar sesión.
+                Guárdalo en un lugar seguro: es personal e intransferible.
+              </p>
+              <div style="display:inline-block;background:#f9f1e7;border:2px dashed #B22222;
+                          border-radius:8px;padding:20px 48px;margin-bottom:32px;">
+                <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#B22222;">
+                  ${code}
+                </span>
+              </div>
+              <p style="margin:0;color:#888;font-size:13px;">
+                Si crees que esto es un error, contacta a un administrador.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#fafafa;padding:16px;text-align:center;border-top:1px solid #eee;">
+              <p style="margin:0;color:#aaa;font-size:12px;">© 2025 Taquería El Corral · SYSCOR</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+/**
  * Email de invitación. Usado cuando un Admin invita a otro Admin o a un
  * Empleado a unirse a SYSCOR. El link lleva un token firmado que el
  * destinatario usa para completar su propio registro (set password, etc.).
@@ -146,7 +200,7 @@ const HTMLRecoveryEmail = (code) => `
  * @param {string} link - URL de aceptación de invitación, con el token como query param.
  * @param {string} roleLabel - Texto a mostrar para el rol invitado (ej. "Administrador", "Empleado").
  */
-const HTMLInvitationEmail = (link, roleLabel) => `
+const htmlInvitationEmail = (link, roleLabel) => `
 <!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -193,12 +247,68 @@ const HTMLInvitationEmail = (link, roleLabel) => `
 </html>
 `;
 
+/**
+ * Email para cuando un admin dispara, desde la ficha del empleado, un cambio
+ * de contraseña: el empleado recibe el enlace y es quien la define, el admin
+ * nunca llega a verla ni a escribirla por él.
+ *
+ * @param {string} link - URL para definir la nueva contraseña, con el token como query param.
+ */
+const htmlPasswordResetInvitationEmail = (link) => `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0"
+               style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+          <tr>
+            <td style="background:#B22222;padding:32px;text-align:center;">
+              <h1 style="margin:0;color:#fff;font-size:22px;letter-spacing:2px;">🌮 SYSCOR</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Taquería El Corral</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 48px;text-align:center;">
+              <h2 style="margin:0 0 12px;color:#1a1a1a;font-size:20px;">Cambio de contraseña solicitado</h2>
+              <p style="margin:0 0 32px;color:#555;font-size:15px;line-height:1.6;">
+                Un administrador solicitó un cambio de contraseña para tu cuenta. Haz clic en el
+                botón para definir una nueva. Este enlace expira en <strong>24 horas</strong>.
+              </p>
+              <a href="${link}" target="_blank"
+                 style="display:inline-block;background:#B22222;color:#fff;
+                        text-decoration:none;font-weight:700;font-size:15px;border-radius:8px;
+                        padding:16px 40px;margin-bottom:24px;">
+                Definir nueva contraseña
+              </a>
+              <p style="margin:0;color:#888;font-size:13px;">
+                Si no esperabas este correo, puedes ignorarlo: tu contraseña actual seguirá funcionando.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#fafafa;padding:16px;text-align:center;border-top:1px solid #eee;">
+              <p style="margin:0;color:#aaa;font-size:12px;">© 2025 Taquería El Corral · SYSCOR</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
 export default {
   generateVerificationCode,
   generateToken,
   verifyToken,
   sendEmail,
-  HTMLVerificationEmail,
-  HTMLRecoveryEmail,
-  HTMLInvitationEmail,
+  htmlVerificationEmail,
+  htmlRecoveryEmail,
+  htmlInvitationEmail,
+  htmlPasswordResetInvitationEmail,
+  htmlAccessCodeEmail,
 };

@@ -2,10 +2,15 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
 // Importamos todas nuestras rutas desde el archivo principal de rutas
 import allRoutes from "./src/routes/allRoutes/index.js";
 // Middleware que identifica al usuario sin bloquear las rutas públicas
 import { attachUser } from "./src/middlewares/auth/authMiddleware.js";
+// Limitador de peticiones global, para mitigar abuso/scraping de la API
+import { globalRateLimiter } from "./src/middlewares/security/rateLimitMiddleware.js";
+// Documento OpenAPI generado a partir de los comentarios @swagger de las rutas
+import { swaggerSpec } from "./src/config/swagger.js";
 
 // Inicializamos la aplicación de Express
 const app = express();
@@ -29,6 +34,16 @@ app.use(express.json());
 // Intentamos identificar al usuario en TODAS las peticiones (sin bloquear ninguna).
 // Gracias a esto las notificaciones pueden decir quién realizó cada movimiento.
 app.use(attachUser);
+
+// Limitador de peticiones global (300 cada 15 min por IP): protege la API
+// completa contra abuso sin afectar el uso normal del panel. Las rutas de
+// login/recuperación tienen además su propio límite, más estricto, definido
+// en cada archivo de rutas de auth (ver rateLimitMiddleware.authRateLimiter).
+app.use(globalRateLimiter);
+
+// Documentación interactiva de la API (Swagger UI). Solo lectura: no exige
+// sesión porque describe la API, no la ejecuta.
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Definimos la ruta base para nuestra API, por defecto usamos "/api"
 const api = process.env.API_URL || "/api";

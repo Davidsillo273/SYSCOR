@@ -1,20 +1,8 @@
-const validateName = (name) => {
-  if (!name || typeof name !== "string") {
-    return {
-      valid: false,
-      message: "El nombre es requerido.",
-    };
-  }
+// Nombre y precio son reglas idénticas en todos los ítems de menú, ver
+// utils/common/duplicateNameUtils.js para la implementación compartida.
+import { validateItemName, validateItemPrice } from "../common/duplicateNameUtils.js";
 
-  if (name.trim().length < 3) {
-    return {
-      valid: false,
-      message: "El nombre debe tener al menos 3 caracteres.",
-    };
-  }
-
-  return { valid: true };
-};
+const validateName = validateItemName;
 
 // En modo normal el combo trae uno o varios platillos fijos. En modo
 // selectivo, en cambio, lo que debe traer al menos una opción es
@@ -73,16 +61,7 @@ const validateCategory = (category) => {
   return { valid: true };
 };
 
-const validatePrice = (price) => {
-  if (price === undefined || price === null || price === "") {
-    return {
-      valid: false,
-      message: "El precio es requerido.",
-    };
-  }
-
-  return { valid: true };
-};
+const validatePrice = validateItemPrice;
 
 const validateDescription = (description) => {
   if (!description || typeof description !== "string") {
