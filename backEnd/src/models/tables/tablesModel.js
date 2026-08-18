@@ -12,6 +12,14 @@ const tableSchema = new Schema({
     type: String,
     enum: ['libre', 'ocupada', 'limpieza', 'reservada'],
     default: 'libre'
+  },
+  // Mesero que la está atendiendo actualmente (mientras está 'ocupada'). Se
+  // limpia cuando la mesa pasa a 'limpieza' o 'libre'; el registro histórico
+  // de quién la atendió siempre queda en cada Order (campo "waiter").
+  currentWaiter: {
+    type: Schema.Types.ObjectId,
+    ref: 'Employee',
+    default: null
   }
 }, {
   // Registra fecha de creación y última actualización

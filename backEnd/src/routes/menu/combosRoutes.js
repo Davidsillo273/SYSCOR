@@ -76,7 +76,7 @@ router.route("/")
  *       500:
  *         description: Error interno del servidor.
  */
-router.get("/active", validateAuthCookie(["customer", "admin"]), combosController.getActiveCombos);
+router.get("/active", validateAuthCookie(["customer", "employee", "admin"]), combosController.getActiveCombos);
 
 // Ranking de combos más vendidos (panel de analítica: solo admin)
 /**

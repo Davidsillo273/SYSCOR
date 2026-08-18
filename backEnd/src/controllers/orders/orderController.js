@@ -465,6 +465,7 @@ orderController.getWaiterDashboard = async (req, res) => {
         _id: table._id,
         number: table.number,
         status: table.status,
+        currentWaiter: table.currentWaiter,
         activeOrders: ordersForTable.map(order => ({
           _id: order._id,
           status: order.status,

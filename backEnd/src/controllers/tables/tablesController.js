@@ -94,9 +94,21 @@ tablesController.updateTable = async (req, res) => {
       return res.status(404).json({ message: "Mesa no encontrada" });
     }
 
+    const updateFields = { number, status };
+    // Al ocupar la mesa, se asigna el mesero autenticado como quien la está
+    // atendiendo; al liberarla o mandarla a limpieza, se limpia esa asignación
+    // (el historial de quién la atendió sigue viviendo en cada Order).
+    if (status && status !== previousTable.status) {
+      if (status === 'ocupada') {
+        updateFields.currentWaiter = req.user?.role === 'employee' ? req.user.id : null;
+      } else if (['libre', 'limpieza'].includes(status)) {
+        updateFields.currentWaiter = null;
+      }
+    }
+
     const tableUpdated = await TablesModel.findByIdAndUpdate(
       req.params.id,
-      { number, status },
+      updateFields,
       { new: true }
     );
 

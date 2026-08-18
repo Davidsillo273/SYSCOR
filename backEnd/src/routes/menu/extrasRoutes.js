@@ -71,7 +71,7 @@ router
  *       500:
  *         description: Error interno del servidor.
  */
-router.get("/active", validateAuthCookie(["customer", "admin"]), extrasController.getActiveExtras);
+router.get("/active", validateAuthCookie(["customer", "employee", "admin"]), extrasController.getActiveExtras);
 
 // Ranking de extras más pedidos
 /**

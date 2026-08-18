@@ -73,7 +73,7 @@ router
  *       500:
  *         description: Error interno del servidor.
  */
-router.get("/active", validateAuthCookie(["customer", "admin"]), drinksController.getActiveDrinks);
+router.get("/active", validateAuthCookie(["customer", "employee", "admin"]), drinksController.getActiveDrinks);
 
 // Ranking de bebidas más vendidas
 /**

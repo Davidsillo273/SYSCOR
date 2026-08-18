@@ -18,6 +18,7 @@ import aiRoutes from "../ai/aiRoutes.js";
 import assistantChatRoutes from "../chat/assistantChatRoutes.js";
 import orderRoutes from "../orders/orderRoutes.js";
 import invoiceRoutes from "../orders/invoiceRoutes.js";
+import attendanceRoutes from "../attendance/attendanceRoutes.js";
 
 
 
@@ -70,6 +71,7 @@ router.use("/users/admins", adminRoutes);
 
 router.use("/inventory", inventoryRoutes);
 router.use("/tables", tablesRoutes);
+router.use("/attendance", attendanceRoutes);
 router.use("/notifications", notificationsRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/ai", aiRoutes);
