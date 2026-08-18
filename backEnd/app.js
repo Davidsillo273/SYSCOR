@@ -39,6 +39,8 @@ app.use(cors({
     },
     // Permitimos el envío de credenciales como las cookies
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // Usamos cookie-parser para poder leer y manejar las cookies que nos envían los usuarios
