@@ -15,6 +15,12 @@ import { swaggerSpec } from "./src/config/swagger.js";
 // Inicializamos la aplicación de Express
 const app = express();
 
+// Render (como cualquier PaaS) pone la app detrás de un proxy inverso: la IP
+// real del cliente llega en el header X-Forwarded-For, no en la conexión TCP.
+// Sin esto, express-rate-limit no puede confiar en esa IP (y la rechaza con
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR) y req.ip/req.secure quedan mal.
+app.set("trust proxy", 1);
+
 // --- Middlewares ---
 // Los middlewares son como filtros que procesan la información antes de llegar a las rutas
 
