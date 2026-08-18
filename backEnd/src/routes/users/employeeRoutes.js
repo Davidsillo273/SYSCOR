@@ -1,11 +1,13 @@
 import express from "express";
 import employeeController from "../../controllers/users/employeeController.js";
 import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
+import { requirePermission } from "../../middlewares/auth/permissionMiddleware.js";
 import ownsResourceOrIsAdmin from "../../middlewares/auth/ownershipMiddleware.js";
 import upload from "../../utils/cloudinaryConfig.js";
 const router = express.Router();
 
-// Listar todos los empleados es información administrativa: solo admin
+// Listar todos los empleados: admin siempre, o un empleado con el permiso
+// de pantalla "employees" asignado explícitamente.
 /**
  * @swagger
  * /users/employees:
@@ -23,7 +25,7 @@ const router = express.Router();
  *       500:
  *         description: Error interno del servidor.
  */
-router.route("/").get(validateAuthCookie(["admin"]), employeeController.getEmployees);
+router.route("/").get(validateAuthCookie(["admin", "employee"]), requirePermission("employees"), employeeController.getEmployees);
 
 // El propio empleado puede editar su ficha, o un admin editar la de cualquiera.
 // employeeController.updateEmployee ya restringe qué campos puede tocar un

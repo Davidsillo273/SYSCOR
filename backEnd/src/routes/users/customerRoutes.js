@@ -1,11 +1,13 @@
 import express from "express";
 import customerController from "../../controllers/users/customerController.js";
 import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
+import { requirePermission } from "../../middlewares/auth/permissionMiddleware.js";
 import ownsResourceOrIsAdmin from "../../middlewares/auth/ownershipMiddleware.js";
 
 const router = express.Router();
 
-// Listar todos los clientes es información administrativa (PII): solo admin
+// Listar todos los clientes (PII): admin siempre, o un empleado con el
+// permiso de pantalla "clients" asignado explícitamente.
 /**
  * @swagger
  * /users/customers:
@@ -23,7 +25,7 @@ const router = express.Router();
  *       500:
  *         description: Error interno del servidor.
  */
-router.route("/").get(validateAuthCookie(["admin"]), customerController.getCustomers);
+router.route("/").get(validateAuthCookie(["admin", "employee"]), requirePermission("clients"), customerController.getCustomers);
 router
     .route("/:id")
     // El propio cliente puede editar su perfil, o un admin editar el de cualquiera

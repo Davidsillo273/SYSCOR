@@ -2,12 +2,13 @@ import express from "express";
 import inventoryController from "../../controllers/inventory/inventoryController.js";
 import upload from "../../utils/cloudinaryConfig.js";
 import { validateAuthCookie } from "../../middlewares/auth/authMiddleware.js";
+import { requirePermission } from "../../middlewares/auth/permissionMiddleware.js";
 
 const router = express.Router();
 
-// El inventario es información de trasastienda (insumos, stock, costos): no
-// hay ninguna señal de que clientes o empleados sin más contexto la necesiten,
-// así que todas las rutas quedan restringidas a admin.
+// El inventario es información de trastienda (insumos, stock, costos): admin
+// siempre, o un empleado con el permiso de pantalla "inventory" asignado
+// explícitamente puede consultarlo. Crear/editar/eliminar sigue solo admin.
 // Obtener todos los productos e insertar uno nuevo (imagen opcional)
 /**
  * @swagger
@@ -69,7 +70,7 @@ const router = express.Router();
  *         description: Error interno del servidor.
  */
 router.route("/")
-    .get(validateAuthCookie(["admin"]), inventoryController.getAllInventory)
+    .get(validateAuthCookie(["admin", "employee"]), requirePermission("inventory"), inventoryController.getAllInventory)
     .post(validateAuthCookie(["admin"]), upload.single("image"), inventoryController.insertInventory);
 
 // Creación mínima (nombre + unidad) desde el builder de receta de bebidas/platillos/extras
