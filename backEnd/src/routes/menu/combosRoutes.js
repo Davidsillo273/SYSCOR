@@ -56,8 +56,8 @@ const router = express.Router();
  *         description: Error interno del servidor.
  */
 router.route("/")
-    .get(validateAuthCookie(["admin"]), combosController.getAllCombos)
-    .post(validateAuthCookie(["admin"]), upload.single("image"), combosController.insertCombo);
+    .get(validateAuthCookie(["admin","employee"]), combosController.getAllCombos)
+    .post(validateAuthCookie(["admin", "employee"]), upload.single("image"), combosController.insertCombo);
 
 // Obtener solo los combos activos (el menú público que ve el cliente)
 /**
@@ -76,7 +76,7 @@ router.route("/")
  *       500:
  *         description: Error interno del servidor.
  */
-router.get("/active", validateAuthCookie(["customer", "admin"]), combosController.getActiveCombos);
+router.get("/active", validateAuthCookie(["customer", "admin", "employee"]), combosController.getActiveCombos);
 
 // Ranking de combos más vendidos (panel de analítica: solo admin)
 /**

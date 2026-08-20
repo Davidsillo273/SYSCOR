@@ -52,8 +52,8 @@ const router = express.Router();
  */
 router
   .route("/")
-  .get(validateAuthCookie(["admin"]), extrasController.getExtras)
-  .post(validateAuthCookie(["admin"]), upload.single("image"), extrasController.insertExtras);
+  .get(validateAuthCookie(["admin", "employee"]), extrasController.getExtras)
+  .post(validateAuthCookie(["admin", "employee"]), upload.single("image"), extrasController.insertExtras);
 
 /**
  * @swagger
@@ -71,7 +71,7 @@ router
  *       500:
  *         description: Error interno del servidor.
  */
-router.get("/active", validateAuthCookie(["customer", "admin"]), extrasController.getActiveExtras);
+router.get("/active", validateAuthCookie(["customer", "admin", "employee"]), extrasController.getActiveExtras);
 
 // Ranking de extras más pedidos
 /**

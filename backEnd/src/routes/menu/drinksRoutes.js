@@ -54,8 +54,8 @@ const router = express.Router();
  */
 router
   .route("/")
-  .get(validateAuthCookie(["admin"]), drinksController.getAllDrinks)
-  .post(validateAuthCookie(["admin"]), upload.single("image"), drinksController.insertDrink);
+  .get(validateAuthCookie(["admin", "employee"]), drinksController.getAllDrinks)
+  .post(validateAuthCookie(["admin", "employee"]), upload.single("image"), drinksController.insertDrink);
 
 /**
  * @swagger
@@ -73,7 +73,7 @@ router
  *       500:
  *         description: Error interno del servidor.
  */
-router.get("/active", validateAuthCookie(["customer", "admin"]), drinksController.getActiveDrinks);
+router.get("/active", validateAuthCookie(["customer", "admin", "employee"]), drinksController.getActiveDrinks);
 
 // Ranking de bebidas más vendidas
 /**
