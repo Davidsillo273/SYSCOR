@@ -75,7 +75,7 @@ const router = express.Router();
  *         description: Error interno del servidor.
  */
 router.route("/")
-  .get(validateAuthCookie(["admin"]), cartController.getAllCarts)
+  .get(validateAuthCookie(["admin", "employee"]), cartController.getAllCarts)
   .post(validateAuthCookie(["employee", "admin"]), cartController.insertCart);
 
 /**
@@ -172,7 +172,7 @@ router.route("/")
  *         description: Error interno del servidor.
  */
 router.route("/:id")
-  .get(validateAuthCookie(["admin"]), cartController.getCartById)
+  .get(validateAuthCookie(["employee", "admin"]), cartController.getCartById)
   .patch(validateAuthCookie(["employee", "admin"]), cartController.updateCart)
   .delete(validateAuthCookie(["admin"]), cartController.deleteCart);
 
